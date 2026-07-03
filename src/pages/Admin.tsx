@@ -36,6 +36,27 @@ const emptyDraft: Draft = { title: '', slug: '', description: '', tags: '', cont
 const SUCCESS_COLOR = '#8fd0ff';
 const ERROR_COLOR = '#e05252';
 
+const sectionHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontFamily: "'IBM Plex Mono',monospace",
+  fontSize: 12,
+  color: '#5b6a8f',
+  marginBottom: 14,
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+};
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={sectionHeaderStyle}>
+      <span style={{ width: 7, height: 7, background: '#f0954c', display: 'inline-block' }} />
+      {children}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { getToken } = useAuth();
   const { user, isLoaded } = useUser();
@@ -104,7 +125,13 @@ export default function Admin() {
 
   if (!isLoaded) return null;
   if (!isAdmin || denied) {
-    return <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Zona restringida.</p>;
+    return (
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
+        <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 14 }}>
+          Zona restringida.
+        </p>
+      </div>
+    );
   }
 
   function onFile(file: File) {
@@ -233,24 +260,36 @@ export default function Admin() {
   const drafts = posts.filter((p) => p.status === 'draft');
   const published = posts.filter((p) => (p.status as string) === 'published');
   const isFormOpen = editingId !== null || draft.content_md !== '' || draft.title !== '';
+  const canPublish = !!draft.title && !!draft.slug;
 
   return (
-    <div>
-      <p className="micro-label" style={{ margin: '0 0 8px' }}>panel admin</p>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Publicar nuevo post</h1>
-        <span style={{ color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '56px 32px 120px' }}>
+      <div
+        style={{
+          fontFamily: "'IBM Plex Mono',monospace",
+          color: '#f0954c',
+          fontSize: 12,
+          letterSpacing: 1.5,
+          textTransform: 'uppercase',
+          marginBottom: 8,
+        }}
+      >
+        panel admin
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>Publicar nuevo post</h1>
+        <span style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5 }}>
           {subscribers === null ? 'Cargando suscriptores…' : `${subscribers} suscriptor${subscribers === 1 ? '' : 'es'} activo${subscribers === 1 ? '' : 's'}`}
         </span>
       </div>
 
-      <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: 15, textTransform: 'uppercase', letterSpacing: 1 }}>Importar desde Drive</h2>
+      <SectionHeader>importar desde drive</SectionHeader>
       {driveConfigured === false && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <p style={{ margin: '0 0 8px', color: 'var(--muted)' }}>
+        <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
+          <p style={{ margin: '0 0 8px', color: '#8b96b2', fontSize: 13.5 }}>
             La importación desde Google Drive todavía no está configurada. Para activarla:
           </p>
-          <ol style={{ color: 'var(--muted)', margin: 0, paddingLeft: 18 }}>
+          <ol style={{ color: '#8b96b2', margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
             <li>Crear una service account de Google con acceso a la API de Drive.</li>
             <li>Compartir la carpeta de Drive con el email de esa service account.</li>
             <li>Pasarle el JSON de la service account a Claude para configurar los secrets.</li>
@@ -258,32 +297,25 @@ export default function Admin() {
         </div>
       )}
       {driveConfigured === true && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <button className="btn btn-primary" onClick={loadDriveFiles} disabled={driveBusy}>
+        <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
+          <button className="admin-chip-btn" onClick={loadDriveFiles} disabled={driveBusy}>
             {driveBusy ? 'Listando…' : 'Listar archivos de Drive'}
           </button>
           {driveFiles && driveFiles.length === 0 && (
-            <p style={{ color: 'var(--muted)', marginTop: 12 }}>No hay archivos .md en la carpeta.</p>
+            <p style={{ color: '#5b6a8f', marginTop: 12, fontSize: 13.5 }}>No hay archivos .md en la carpeta.</p>
           )}
           {driveFiles && driveFiles.length > 0 && (
-            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ marginTop: 14, border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden' }}>
               {driveFiles.map((f) => (
-                <div
-                  key={f.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8,
-                  }}
-                >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div key={f.id} className="admin-row">
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: 14 }}>
                     {f.name}{' '}
-                    <span style={{ color: 'var(--muted)', fontSize: 13 }}>
+                    <span style={{ color: '#5b6a8f', fontSize: 11.5, fontFamily: "'IBM Plex Mono',monospace" }}>
                       {new Date(f.modifiedTime).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </span>
                   </span>
                   <button
-                    className="btn btn-secondary"
-                    style={{ flexShrink: 0 }}
+                    className="admin-chip-btn"
                     onClick={() => importFromDrive(f)}
                     disabled={importingId === f.id}
                   >
@@ -297,6 +329,7 @@ export default function Admin() {
       )}
 
       <div
+        className={`dropzone${dragOver ? ' drag-active' : ''}`}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
@@ -309,20 +342,57 @@ export default function Admin() {
           const f = e.dataTransfer.files[0];
           if (f) onFile(f);
         }}
-        style={{
-          border: `2px dashed ${dragOver ? 'var(--accent)' : 'var(--border-strong)'}`,
-          borderRadius: 10,
-          padding: 24,
-          textAlign: 'center',
-          marginBottom: 20,
-          cursor: 'pointer',
-          transition: 'border-color 0.15s ease',
-        }}
       >
-        <p style={{ margin: '0 0 4px' }}>Arrastra tu archivo .md aquí</p>
-        <p style={{ margin: 0, color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>
+        <div style={{ width: 44, height: 44, margin: '0 auto 16px', border: '2px solid #f0954c', borderRadius: 8, position: 'relative' }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%,-50%)',
+              fontFamily: "'IBM Plex Mono',monospace",
+              fontSize: 14,
+              color: '#f0954c',
+              fontWeight: 700,
+            }}
+          >
+            .md
+          </div>
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Arrastra tu archivo .md aquí</div>
+        <div style={{ color: '#5b6a8f', fontSize: 13, marginBottom: 18 }}>
           o haz clic para seleccionar desde tu equipo
-        </p>
+        </div>
+        <div className="dropzone-chip">Seleccionar archivo</div>
+
+        {draft.content_md && (
+          <div
+            style={{
+              marginTop: 22,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              background: 'rgba(59,130,246,.12)',
+              border: '1px solid #3b82f6',
+              padding: '9px 16px',
+              borderRadius: 8,
+            }}
+          >
+            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, color: '#8fd0ff' }}>
+              {draft.slug || draft.title || 'archivo cargado'}
+            </span>
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                cancelEdit();
+              }}
+              style={{ cursor: 'pointer', color: '#5b6a8f', fontSize: 14 }}
+            >
+              ✕
+            </span>
+          </div>
+        )}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -334,35 +404,65 @@ export default function Admin() {
       </div>
 
       {isFormOpen && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <h2 style={{ marginTop: 0 }}>{editingId ? 'Editar post' : 'Nuevo borrador'}</h2>
-          <label>Título</label>
-          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value, slug: slugify(e.target.value) })} />
-          <label>Slug</label>
-          <input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} />
-          <label>Descripción (para cards y el correo)</label>
-          <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-          <label>Tags (separados por coma)</label>
-          <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
-          <label>
-            Contenido ({draft.content_md.length} caracteres)
-            {editingId && (
-              <span style={{ display: 'block', color: 'var(--muted)', fontSize: 13, marginTop: 2 }}>
-                Deja el contenido vacío para conservar el actual.
-              </span>
-            )}
-          </label>
-          <textarea rows={6} value={draft.content_md} onChange={(e) => setDraft({ ...draft, content_md: e.target.value })} />
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label>Título</label>
+              <input
+                value={draft.title}
+                placeholder="ej. Diseñando un lakehouse desde cero"
+                onChange={(e) => setDraft({ ...draft, title: e.target.value, slug: slugify(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label>Etiqueta</label>
+              <input
+                value={draft.tags}
+                placeholder="ej. Data Engineering, Cloud"
+                onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+              />
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label>Descripción (para cards y el correo)</label>
+            <input
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label>
+              Contenido ({draft.content_md.length} caracteres)
+              {editingId && (
+                <span style={{ display: 'block', color: '#5b6a8f', textTransform: 'none', letterSpacing: 0, marginTop: 4 }}>
+                  Deja el contenido vacío para conservar el actual.
+                </span>
+              )}
+            </label>
+            <textarea rows={8} value={draft.content_md} onChange={(e) => setDraft({ ...draft, content_md: e.target.value })} />
+          </div>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" onClick={saveDraft} disabled={!draft.title || !draft.slug}>
-              {editingId ? 'Guardar cambios' : 'Guardar borrador'}
-            </button>
-            <button className="btn btn-secondary" onClick={() => setShowPreview((v) => !v)}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            <div
+              onClick={saveDraft}
+              style={{
+                cursor: canPublish ? 'pointer' : 'not-allowed',
+                display: 'inline-block',
+                background: canPublish ? '#3b82f6' : '#1c2438',
+                color: canPublish ? '#06101f' : '#5b6a8f',
+                fontWeight: 600,
+                fontSize: 14,
+                padding: '12px 26px',
+                borderRadius: 8,
+              }}
+            >
+              {editingId ? 'Guardar cambios' : 'Publicar post'}
+            </div>
+            <button className="admin-chip-btn" onClick={() => setShowPreview((v) => !v)}>
               {showPreview ? 'ocultar vista previa' : 'vista previa'}
             </button>
             {editingId && (
-              <button className="btn btn-secondary" onClick={cancelEdit}>
+              <button className="admin-chip-btn" onClick={cancelEdit}>
                 cancelar
               </button>
             )}
@@ -375,62 +475,83 @@ export default function Admin() {
                   {draft.content_md}
                 </ReactMarkdown>
               ) : (
-                <p style={{ color: 'var(--muted)' }}>Deja el contenido vacío para conservar el actual.</p>
+                <p style={{ color: '#5b6a8f' }}>Deja el contenido vacío para conservar el actual.</p>
               )}
             </div>
           )}
         </div>
       )}
 
-      {msg && <p style={{ color: msgIsError ? ERROR_COLOR : SUCCESS_COLOR }}>{msg}</p>}
+      {msg && (
+        <p style={{ color: msgIsError ? ERROR_COLOR : SUCCESS_COLOR, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, marginBottom: 20 }}>
+          {msgIsError ? msg : `✓ ${msg}`}
+        </p>
+      )}
 
-      <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: 15, textTransform: 'uppercase', letterSpacing: 1 }}>Borradores</h2>
-      {drafts.length === 0 && <p style={{ color: 'var(--muted)' }}>No hay borradores.</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-        {drafts.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', gap: 10, flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {p.title} <span style={{ color: 'var(--muted)' }}>/{p.slug}</span>
-            </span>
-            <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-              <span className="tag">borrador</span>
-              <button className="btn btn-secondary" onClick={() => startEdit(p)}>editar</button>
-              <button className="btn btn-primary" onClick={() => publish(p.id)}>Publicar + email</button>
-              <button className="btn btn-secondary" onClick={() => remove(p.id)}>borrar</button>
-            </span>
+      <div style={{ marginTop: 44 }}>
+        <SectionHeader>borradores ({drafts.length})</SectionHeader>
+        {drafts.length === 0 && <p style={{ color: '#5b6a8f', fontSize: 13.5 }}>No hay borradores.</p>}
+        {drafts.length > 0 && (
+          <div style={{ border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden', marginBottom: 32 }}>
+            {drafts.map((p) => (
+              <div key={p.id} className="admin-row">
+                <span
+                  style={{
+                    fontFamily: "'IBM Plex Mono',monospace",
+                    fontSize: 11,
+                    color: '#3b82f6',
+                    background: 'rgba(59,130,246,.12)',
+                    padding: '4px 10px',
+                    borderRadius: 5,
+                    flexShrink: 0,
+                  }}
+                >
+                  {p.tags[0] ?? 'sin tag'}
+                </span>
+                <span style={{ fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.title} <span style={{ color: '#5b6a8f' }}>/{p.slug}</span>
+                </span>
+                <button className="admin-action" onClick={() => publish(p.id)} style={{ color: '#8fd0ff' }}>
+                  publicar
+                </button>
+                <button className="admin-action" onClick={() => startEdit(p)}>editar</button>
+                <button className="admin-action danger" onClick={() => remove(p.id)}>borrar</button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        )}
 
-      <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: 15, textTransform: 'uppercase', letterSpacing: 1 }}>Publicados</h2>
-      {published.length === 0 && <p style={{ color: 'var(--muted)' }}>No hay posts publicados.</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {published.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', gap: 10, flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {p.title} <span style={{ color: 'var(--muted)' }}>/{p.slug}</span>
-            </span>
-            <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-              <span style={{ background: 'var(--accent)', color: '#fff', fontSize: 11, padding: '3px 9px', borderRadius: 6, fontFamily: 'var(--font-mono)' }}>
-                publicado
-              </span>
-              <button className="btn btn-secondary" onClick={() => startEdit(p)}>editar</button>
-              <button className="btn btn-secondary" onClick={() => remove(p.id)}>borrar</button>
-            </span>
+        <SectionHeader>posts publicados ({published.length})</SectionHeader>
+        {published.length === 0 && <p style={{ color: '#5b6a8f', fontSize: 13.5 }}>No hay posts publicados.</p>}
+        {published.length > 0 && (
+          <div style={{ border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden' }}>
+            {published.map((p) => (
+              <div key={p.id} className="admin-row">
+                <span
+                  style={{
+                    fontFamily: "'IBM Plex Mono',monospace",
+                    fontSize: 11,
+                    color: '#3b82f6',
+                    background: 'rgba(59,130,246,.12)',
+                    padding: '4px 10px',
+                    borderRadius: 5,
+                    flexShrink: 0,
+                  }}
+                >
+                  {p.tags[0] ?? 'sin tag'}
+                </span>
+                <span style={{ fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.title}
+                </span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: '#5b6a8f' }}>
+                  {p.published_at ? new Date(p.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                </span>
+                <button className="admin-action" onClick={() => startEdit(p)}>editar</button>
+                <button className="admin-action danger" onClick={() => remove(p.id)}>borrar</button>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
