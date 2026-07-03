@@ -11,7 +11,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ClerkProvider
       publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
       appearance={{
-        variables: { colorPrimary: '#E8A25E', colorBackground: '#16213E', colorText: '#F2F2F0' },
+        variables: { colorPrimary: '#3b82f6', colorBackground: '#151b2e', colorText: '#e9ecf4' },
       }}
     >
       <BrowserRouter>

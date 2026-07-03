@@ -1,12 +1,19 @@
 :root {
-  --bg: #0A0E17;
-  --surface: #16213E;
-  --accent: #E8A25E;
-  --text: #F2F2F0;
-  --muted: #8B93A7;
-  --font-pixel: 'Press Start 2P', monospace;
+  --bg: #0a0e18;
+  --surface-1: #111830;
+  --surface-2: #151b2e;
+  --border: #1c2438;
+  --border-strong: #232d47;
+  --text: #e9ecf4;
+  --text-2: #c7cfe2;
+  --muted: #8b96b2;
+  --muted-2: #5b6a8f;
+  --accent: #3b82f6;
+  --accent-2: #f0954c;
+  --error: #e05252;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-heading: 'Space Grotesk', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
 }
 * { box-sizing: border-box; }
 body {
@@ -18,73 +25,156 @@ body {
   line-height: 1.7;
 }
 h1, h2, h3 { font-family: var(--font-heading); font-weight: 700; line-height: 1.3; }
-.px { font-family: var(--font-pixel); line-height: 1.8; }
 h1 { font-size: 28px; }
 h2 { font-size: 20px; }
 h3 { font-size: 17px; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 .container { max-width: 860px; margin: 0 auto; padding: 0 20px; }
-.pixel-btn {
-  font-family: var(--font-body);
-  font-weight: 600;
+
+/* micro-labels: mono, uppercase, tracked, muted-2 */
+.micro-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted-2);
+}
+
+/* botones */
+.btn {
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-size: 14px;
-  background: var(--accent);
-  color: var(--bg);
-  border: 2px solid var(--text);
-  box-shadow: 3px 3px 0 #000;
+  border-radius: 6px;
   padding: 10px 18px;
   cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  border: 1px solid transparent;
+  display: inline-block;
 }
-.pixel-btn:hover { background: var(--text); }
-.pixel-btn:active { box-shadow: 1px 1px 0 #000; transform: translate(2px, 2px); }
-.pixel-btn.ghost { background: transparent; color: var(--text); border-color: var(--muted); box-shadow: none; }
-.pixel-card {
-  background: var(--surface);
-  border: 2px solid var(--text);
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, .55);
+.btn:disabled { cursor: not-allowed; opacity: 0.6; }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) { background: #2f6fdb; }
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  text-transform: lowercase;
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--accent); }
+
+/* legacy alias kept temporarily during restyle — same look as .btn-primary/.btn-secondary */
+.pixel-btn {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 14px;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.pixel-btn:hover:not(:disabled) { background: #2f6fdb; }
+.pixel-btn.ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+  text-transform: lowercase;
+}
+.pixel-btn.ghost:hover:not(:disabled) { border-color: var(--accent); }
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   padding: 16px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
+}
+.card.clickable { cursor: pointer; }
+.card.clickable:hover,
+a.card:hover { border-color: var(--accent); }
+
+/* legacy alias */
+.pixel-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  transition: border-color 0.15s ease;
 }
 .pixel-card.clickable { cursor: pointer; }
 .pixel-card.clickable:hover,
-a.pixel-card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 5px 5px 0 rgba(0, 0, 0, .55);
-}
+a.pixel-card:hover { border-color: var(--accent); }
+
 .tag {
   display: inline-block;
-  border: 1px dashed var(--accent);
-  color: var(--accent);
-  font-size: 13px;
-  padding: 2px 8px;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 11px;
+  border-radius: 6px;
+  padding: 3px 9px;
   margin-right: 6px;
 }
-.dashed-divider { border: none; border-top: 2px dashed var(--muted); margin: 20px 0; }
+
+/* filter pills (tag filter row on Home) */
+.pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: lowercase;
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  background: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.pill:hover { border-color: var(--accent); }
+.pill.active {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+}
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+/* legacy alias */
+.dashed-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
 .markdown-body pre {
-  background: var(--surface);
-  border-left: 4px solid var(--accent);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 14px;
   overflow-x: auto;
   font-size: 14px;
 }
-.markdown-body code { font-family: ui-monospace, monospace; color: var(--accent); }
+.markdown-body code { font-family: var(--font-mono); color: var(--accent-2); }
 .markdown-body pre code { color: inherit; }
-.markdown-body img { max-width: 100%; border: 2px solid var(--text); }
+.markdown-body img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); }
 .markdown-body blockquote {
-  border-left: 4px solid var(--muted);
+  border-left: 2px solid var(--border-strong);
   margin-left: 0;
   padding-left: 14px;
   color: var(--muted);
 }
+
 input, textarea, select {
   background: var(--bg);
-  border: 2px solid var(--muted);
+  border: 1px solid var(--border-strong);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
-  padding: 8px;
+  border-radius: 6px;
+  padding: 8px 10px;
   width: 100%;
 }
 input:focus, textarea:focus { outline: none; border-color: var(--accent); }
