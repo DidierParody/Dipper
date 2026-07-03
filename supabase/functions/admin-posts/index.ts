@@ -8,6 +8,10 @@ const db = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
+function escapeHtml(s: string): string {
+  return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+
 async function requireAdmin(req: Request): Promise<void> {
   const userId = await verifyClerkToken(req.headers.get('Authorization'));
   const email = await getClerkEmail(userId);
@@ -34,8 +38,8 @@ async function sendNewsletter(postId: string): Promise<{ sent: number; failed: n
     html: `
       <div style="background:#0A0E17;color:#F2F2F0;padding:32px;font-family:monospace;">
         <p style="color:#E8A25E;font-size:12px;margin:0 0 8px;">DIPPER.DEV</p>
-        <h1 style="font-size:20px;margin:0 0 12px;">${post.title}</h1>
-        <p style="color:#8B93A7;margin:0 0 20px;">${post.description ?? ''}</p>
+        <h1 style="font-size:20px;margin:0 0 12px;">${escapeHtml(post.title)}</h1>
+        <p style="color:#8B93A7;margin:0 0 20px;">${escapeHtml(post.description ?? '')}</p>
         <a href="${site}/post/${post.slug}"
            style="background:#E8A25E;color:#0A0E17;padding:10px 16px;text-decoration:none;font-weight:bold;">
           &gt; LEER POST_</a>
@@ -98,6 +102,9 @@ Deno.serve(async (req) => {
       const patch = Object.fromEntries(
         Object.entries(fields).filter(([k]) => allowed.includes(k))
       );
+      if (typeof patch.content_md === 'string' && patch.content_md.length > 1_000_000) {
+        return json({ error: 'md demasiado grande (max 1MB)' }, 400);
+      }
       const { error } = await db.from('posts').update(patch).eq('id', id);
       if (error) throw error;
       return json({ ok: true });
