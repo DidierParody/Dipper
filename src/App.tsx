@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Post from './pages/Post';
 import Admin from './pages/Admin';
 import Unsubscribe from './pages/Unsubscribe';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/post/:slug" element={<Post />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
+          <Route path="/perfil" element={<Profile />} />
         </Routes>
       </main>
       <Footer />

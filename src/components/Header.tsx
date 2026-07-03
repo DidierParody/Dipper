@@ -17,12 +17,16 @@ export default function Header() {
           DIPPER<span style={{ color: 'var(--accent)' }}>.DEV</span>
         </Link>
         <nav style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <Link to="/" style={{ color: 'var(--text)', fontWeight: 500 }}>Posts</Link>
+          <SignedIn>
+            <Link to="/perfil" style={{ color: 'var(--text)', fontWeight: 500 }}>Perfil</Link>
+          </SignedIn>
           {isAdmin && (
             <Link to="/admin" style={{ color: 'var(--muted)' }}>admin</Link>
           )}
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="pixel-btn">LOGIN</button>
+              <button className="pixel-btn">Login</button>
             </SignInButton>
           </SignedOut>
           <SignedIn>
