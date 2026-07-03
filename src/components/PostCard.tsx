@@ -10,15 +10,15 @@ export default function PostCard({ post }: { post: Post }) {
   return (
     <Link
       to={`/post/${post.slug}`}
-      className="pixel-card"
+      className="card"
       style={{ display: 'block', color: 'var(--text)' }}
     >
-      <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 6px' }}>
+      <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 6px', fontFamily: 'var(--font-mono)' }}>
         {date}
         {date && ' · '}
         {minutes} min de lectura
       </p>
-      <h2 style={{ margin: '0 0 10px', color: 'var(--text)' }}>{post.title}</h2>
+      <h2 style={{ margin: '0 0 10px', color: 'var(--text)', fontSize: 20 }}>{post.title}</h2>
       {post.description && (
         <p style={{ color: 'var(--muted)', margin: '0 0 10px' }}>{post.description}</p>
       )}

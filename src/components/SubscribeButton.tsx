@@ -46,9 +46,9 @@ export default function SubscribeButton() {
     return (
       <div>
         <SignInButton mode="modal">
-          <button className="pixel-btn">Suscribirme</button>
+          <button className="btn btn-primary">Suscribirme</button>
         </SignInButton>
-        <p style={{ color: 'var(--muted)', fontSize: 16, marginTop: 8 }}>
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, fontFamily: 'var(--font-mono)' }}>
           Inicia sesión con GitHub o Google. Sin spam.
         </p>
       </div>
@@ -58,15 +58,15 @@ export default function SubscribeButton() {
   return (
     <div>
       {state === 'subscribed' ? (
-        <button className="pixel-btn ghost" onClick={toggle} disabled={(state as string) === 'busy'}>
+        <button className="btn btn-secondary" onClick={toggle} disabled={(state as string) === 'busy'}>
           Suscrito ✓ (clic para salir)
         </button>
       ) : (
-        <button className="pixel-btn" onClick={toggle} disabled={state === 'busy' || state === 'unknown'}>
+        <button className="btn btn-primary" onClick={toggle} disabled={state === 'busy' || state === 'unknown'}>
           {state === 'busy' ? '...' : 'Suscribirme'}
         </button>
       )}
-      {error && <p style={{ color: 'var(--accent)', fontSize: 16, marginTop: 8 }}>{error}</p>}
+      {error && <p style={{ color: 'var(--error)', fontSize: 14, marginTop: 8, fontFamily: 'var(--font-mono)' }}>{error}</p>}
     </div>
   );
 }
