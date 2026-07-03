@@ -31,4 +31,9 @@ export const adminApi = {
   remove: (token: string, id: string) => call('admin-posts', { action: 'delete', id }, token),
   uploadAsset: (token: string, filename: string, base64: string, content_type: string) =>
     call('admin-posts', { action: 'upload_asset', filename, base64, content_type }, token),
+  driveStatus: (token: string) => call('admin-posts', { action: 'drive_status' }, token),
+  driveList: (token: string) => call('admin-posts', { action: 'drive_list' }, token),
+  driveImport: (token: string, file_id: string, name: string) =>
+    call('admin-posts', { action: 'drive_import', file_id, name }, token),
+  stats: (token: string) => call('admin-posts', { action: 'stats' }, token),
 };
