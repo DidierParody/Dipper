@@ -16,17 +16,22 @@ export default function Home() {
 
   return (
     <>
-      <section style={{ textAlign: 'center', padding: '28px 0 20px' }}>
-        <h1 style={{ margin: '0 0 12px' }}>
+      <section style={{ textAlign: 'center', padding: '16px 0 14px' }}>
+        <h1 style={{ margin: '0 0 8px' }}>
           Notas de un <span style={{ color: 'var(--accent)' }}>Ingeniero de Datos</span>
         </h1>
-        <p style={{ color: 'var(--muted)', margin: '0 0 18px' }}>
+        <p style={{ color: 'var(--muted)', margin: '0 0 14px' }}>
           Pipelines, SQL, cloud y experimentos — directo desde mis notas de Notion.
         </p>
         <SubscribeButton />
       </section>
       <hr className="dashed-divider" />
       {tag && <p style={{ color: 'var(--muted)' }}>Posts con tag <span className="tag">{tag}</span></p>}
+      {posts && posts.length > 0 && (
+        <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 12px' }}>
+          {posts.length} {posts.length === 1 ? 'post publicado' : 'posts publicados'}
+        </p>
+      )}
       {error && <p style={{ color: 'var(--accent)' }}>Error cargando posts. Recarga la página.</p>}
       {posts === null && !error && <p style={{ color: 'var(--muted)' }}>Cargando...</p>}
       {posts?.length === 0 && <p style={{ color: 'var(--muted)' }}>Todavía no hay posts publicados.</p>}

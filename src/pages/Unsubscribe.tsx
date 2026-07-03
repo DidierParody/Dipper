@@ -30,7 +30,7 @@ export default function Unsubscribe() {
         </>
       )}
       <Link to="/" className="pixel-btn ghost" style={{ display: 'inline-block', marginTop: 12 }}>
-        &lt; VOLVER AL BLOG
+        Volver al blog
       </Link>
     </div>
   );
