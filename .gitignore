@@ -21,3 +21,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Tooling local
+.claude/
