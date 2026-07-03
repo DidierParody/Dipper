@@ -1,0 +1,80 @@
+:root {
+  --bg: #0A0E17;
+  --surface: #16213E;
+  --accent: #E8A25E;
+  --text: #F2F2F0;
+  --muted: #8B93A7;
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-body: 'VT323', monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 20px;
+  line-height: 1.5;
+}
+h1, h2, h3, .px { font-family: var(--font-pixel); line-height: 1.8; }
+h1 { font-size: 18px; }
+h2 { font-size: 14px; }
+h3 { font-size: 12px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.container { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  background: var(--accent);
+  color: var(--bg);
+  border: 2px solid var(--text);
+  box-shadow: 3px 3px 0 #000;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.pixel-btn:hover { background: var(--text); }
+.pixel-btn:active { box-shadow: 1px 1px 0 #000; transform: translate(2px, 2px); }
+.pixel-btn.ghost { background: transparent; color: var(--text); border-color: var(--muted); box-shadow: none; }
+.pixel-card {
+  background: var(--surface);
+  border: 2px solid var(--text);
+  box-shadow: 4px 4px 0 #000;
+  padding: 16px;
+}
+.tag {
+  display: inline-block;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  font-size: 16px;
+  padding: 1px 8px;
+  margin-right: 6px;
+}
+.dashed-divider { border: none; border-top: 2px dashed var(--muted); margin: 20px 0; }
+.markdown-body pre {
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+  padding: 14px;
+  overflow-x: auto;
+  font-size: 15px;
+}
+.markdown-body code { font-family: ui-monospace, monospace; color: var(--accent); }
+.markdown-body pre code { color: inherit; }
+.markdown-body img { max-width: 100%; border: 2px solid var(--text); }
+.markdown-body blockquote {
+  border-left: 4px solid var(--muted);
+  margin-left: 0;
+  padding-left: 14px;
+  color: var(--muted);
+}
+input, textarea, select {
+  background: var(--bg);
+  border: 2px solid var(--muted);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 18px;
+  padding: 8px;
+  width: 100%;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+label { color: var(--muted); font-size: 16px; display: block; margin: 10px 0 4px; }
