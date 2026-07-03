@@ -48,7 +48,7 @@ export default function SubscribeButton() {
         <SignInButton mode="modal">
           <button className="btn btn-primary">Suscribirme</button>
         </SignInButton>
-        <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, fontFamily: 'var(--font-mono)' }}>
+        <p style={{ color: 'var(--muted-2)', fontSize: 12.5, marginTop: 10, fontFamily: 'var(--font-mono)' }}>
           Inicia sesión con GitHub o Google. Sin spam.
         </p>
       </div>
@@ -66,7 +66,7 @@ export default function SubscribeButton() {
           {state === 'busy' ? '...' : 'Suscribirme'}
         </button>
       )}
-      {error && <p style={{ color: 'var(--error)', fontSize: 14, marginTop: 8, fontFamily: 'var(--font-mono)' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--error)', fontSize: 12.5, marginTop: 8, fontFamily: 'var(--font-mono)' }}>{error}</p>}
     </div>
   );
 }

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchPublishedPosts, type Post } from '../lib/supabase';
-import PostCard from '../components/PostCard';
-import SubscribeButton from '../components/SubscribeButton';
+import { readingTime } from '../lib/reading-time';
 
-export default function Home() {
+interface HomeProps {
+  search: string;
+}
+
+export default function Home({ search }: HomeProps) {
   const { tag } = useParams();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[] | null>(null);
@@ -24,86 +27,131 @@ export default function Home() {
 
   const filteredPosts = useMemo(() => {
     if (!posts) return posts;
-    if (!tag) return posts;
-    return posts.filter((p) => p.tags.includes(tag));
-  }, [posts, tag]);
+    const q = search.trim().toLowerCase();
+    return posts
+      .filter((p) => !tag || p.tags.includes(tag))
+      .filter(
+        (p) =>
+          !q ||
+          p.title.toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q)) ||
+          (p.description ?? '').toLowerCase().includes(q)
+      );
+  }, [posts, tag, search]);
 
   function selectTag(t: string | null) {
     navigate(t ? `/tag/${t}` : '/');
   }
 
+  const noResults = posts !== null && filteredPosts !== null && filteredPosts.length === 0 && (search.trim() || tag);
+
   return (
-    <>
-      <section style={{ padding: '24px 0 20px' }}>
-        <p className="micro-label" style={{ margin: '0 0 12px' }}>// notas de ingeniería de datos</p>
-        <h1 style={{ margin: '0 0 14px', fontSize: 44, lineHeight: 1.15 }}>
-          Cloud, datos <span style={{ color: 'var(--accent-2)' }}>&</span> sistemas — escritos en producción.
-        </h1>
-        <p style={{ color: 'var(--muted)', margin: '0 0 20px', maxWidth: 640 }}>
-          Pipelines, SQL, cloud y experimentos — directo desde mis notas de Notion.
-        </p>
-        <SubscribeButton />
-      </section>
-
-      <hr className="divider" />
-
-      {allTags.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '16px 0 24px' }}>
-          <button
-            type="button"
-            className={`pill${!tag ? ' active' : ''}`}
-            onClick={() => selectTag(null)}
-          >
-            Todos
-          </button>
-          {allTags.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`pill${tag === t ? ' active' : ''}`}
-              onClick={() => selectTag(t)}
-            >
-              {t}
-            </button>
-          ))}
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px 100px' }}>
+      <div style={{ marginBottom: 44, animation: 'fadeUp .5s ease both' }}>
+        <div
+          style={{
+            fontFamily: "'IBM Plex Mono',monospace",
+            color: '#f0954c',
+            fontSize: 13,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            marginBottom: 12,
+          }}
+        >
+          // notas de ingeniería de datos
         </div>
-      )}
-
-      {filteredPosts && filteredPosts.length > 0 && (
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 12px', fontFamily: 'var(--font-mono)' }}>
-          {filteredPosts.length} {filteredPosts.length === 1 ? 'post publicado' : 'posts publicados'}
+        <h1 style={{ fontSize: 44, fontWeight: 700, lineHeight: 1.1, margin: '0 0 14px', letterSpacing: '-1px' }}>
+          Cloud, datos <span style={{ color: '#f0954c' }}>&</span> sistemas
+          <br />
+          escritos en producción.
+        </h1>
+        <p style={{ color: '#8b96b2', fontSize: 16, maxWidth: 560, lineHeight: 1.6, margin: 0 }}>
+          Apuntes técnicos sobre data engineering, arquitectura cloud, IA/ML y seguridad — directo desde lo
+          que construyo día a día.
         </p>
-      )}
-      {error && <p style={{ color: 'var(--error)' }}>Error cargando posts. Recarga la página.</p>}
-      {posts === null && !error && <p style={{ color: 'var(--muted)' }}>Cargando...</p>}
-      {filteredPosts?.length === 0 && <p style={{ color: 'var(--muted)' }}>Todavía no hay posts publicados.</p>}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-        {filteredPosts?.map((p) => <PostCard key={p.id} post={p} />)}
       </div>
 
-      <hr className="divider" style={{ marginTop: 40 }} />
-
-      <section style={{ padding: '20px 0 40px' }}>
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, color: 'var(--text-2)', margin: '0 0 14px' }}>
-          <span style={{ display: 'inline-block', width: 7, height: 7, background: 'var(--accent-2)' }} />
-          el autor
-        </h2>
-        <p style={{ color: 'var(--muted)', maxWidth: 640, margin: '0 0 16px' }}>
-          Ingeniero de Datos construyendo pipelines, modelos y plataformas cloud. Escribo sobre lo que
-          aprendo en producción: SQL, orquestación, arquitectura de datos y las decisiones que no salen
-          en la documentación oficial.
-        </p>
-        <p className="micro-label" style={{ margin: '0 0 8px' }}>Áreas de foco</p>
-        <div style={{ marginBottom: 16 }}>
-          {['cloud', 'data engineering', 'sql', 'pipelines'].map((t) => (
-            <span key={t} className="tag">{t}</span>
-          ))}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 36 }}>
+        <div className={`tag-pill${!tag ? ' active' : ''}`} onClick={() => selectTag(null)}>
+          Todos
         </div>
-        {/* TODO: agregar LinkedIn/X cuando tengamos las URLs definitivas */}
-        <a href="https://github.com/DidierParody" target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--font-mono)', fontSize: 14 }}>
-          GitHub ↗
-        </a>
-      </section>
-    </>
+        {allTags.map((t) => (
+          <div key={t} className={`tag-pill${tag === t ? ' active' : ''}`} onClick={() => selectTag(t)}>
+            {t}
+          </div>
+        ))}
+      </div>
+
+      {error && <p style={{ color: 'var(--error)' }}>Error cargando posts. Recarga la página.</p>}
+      {posts === null && !error && (
+        <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace" }}>Cargando...</p>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 20 }}>
+        {filteredPosts?.map((post) => {
+          const date = post.published_at
+            ? new Date(post.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })
+            : '';
+          const minutes = readingTime(post.content_md);
+          return (
+            <div key={post.id} className="post-card" onClick={() => navigate(`/post/${post.slug}`)}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span
+                  style={{
+                    fontFamily: "'IBM Plex Mono',monospace",
+                    fontSize: 11,
+                    color: '#3b82f6',
+                    background: 'rgba(59,130,246,.12)',
+                    padding: '4px 10px',
+                    borderRadius: 5,
+                  }}
+                >
+                  {post.tags[0] ?? ''}
+                </span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f' }}>
+                  {date}
+                </span>
+              </div>
+              <h3 style={{ fontSize: 19, fontWeight: 600, margin: 0, lineHeight: 1.35 }}>{post.title}</h3>
+              <p style={{ color: '#8b96b2', fontSize: 13.5, lineHeight: 1.6, margin: 0, flex: 1 }}>
+                {post.description}
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingTop: 10,
+                  borderTop: '1px solid #1c2438',
+                }}
+              >
+                <img
+                  src="https://github.com/DidierParody.png"
+                  alt=""
+                  style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: '#5b6a8f' }}>
+                  Didier Parody · {minutes} min
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {filteredPosts?.length === 0 && !error && posts !== null && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '60px 0',
+            color: '#5b6a8f',
+            fontFamily: "'IBM Plex Mono',monospace",
+            fontSize: 14,
+          }}
+        >
+          {noResults ? `No hay posts que coincidan con "${search}"` : 'Todavía no hay posts publicados.'}
+        </div>
+      )}
+    </div>
   );
 }
