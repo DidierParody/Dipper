@@ -29,7 +29,7 @@ export default function Unsubscribe() {
           <p style={{ color: 'var(--muted)' }}>El link de desuscripción no es válido o ya expiró.</p>
         </>
       )}
-      <Link to="/" className="pixel-btn ghost" style={{ display: 'inline-block', marginTop: 12 }}>
+      <Link to="/" className="btn btn-secondary" style={{ display: 'inline-block', marginTop: 12 }}>
         Volver al blog
       </Link>
     </div>

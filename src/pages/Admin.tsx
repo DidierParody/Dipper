@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -33,8 +33,8 @@ interface DriveFile {
 
 const emptyDraft: Draft = { title: '', slug: '', description: '', tags: '', content_md: '' };
 
-const SUCCESS_COLOR = '#E8A25E';
-const ERROR_COLOR = '#E24B4A';
+const SUCCESS_COLOR = '#8fd0ff';
+const ERROR_COLOR = '#e05252';
 
 export default function Admin() {
   const { getToken } = useAuth();
@@ -51,6 +51,8 @@ export default function Admin() {
   const [driveBusy, setDriveBusy] = useState(false);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin =
     user?.primaryEmailAddress?.emailAddress?.toLowerCase() ===
@@ -234,18 +236,17 @@ export default function Admin() {
 
   return (
     <div>
+      <p className="micro-label" style={{ margin: '0 0 8px' }}>panel admin</p>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-        <h1 style={{ margin: 0 }}>
-          Admin <span style={{ color: 'var(--accent)' }}>· gestor de posts</span>
-        </h1>
-        <span style={{ color: 'var(--muted)', fontSize: 14 }}>
+        <h1 style={{ margin: 0, fontSize: 28 }}>Publicar nuevo post</h1>
+        <span style={{ color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>
           {subscribers === null ? 'Cargando suscriptores…' : `${subscribers} suscriptor${subscribers === 1 ? '' : 'es'} activo${subscribers === 1 ? '' : 's'}`}
         </span>
       </div>
 
-      <h2>Importar desde Drive</h2>
+      <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: 15, textTransform: 'uppercase', letterSpacing: 1 }}>Importar desde Drive</h2>
       {driveConfigured === false && (
-        <div className="pixel-card" style={{ marginBottom: 20, borderStyle: 'dashed', borderColor: 'var(--muted)' }}>
+        <div className="card" style={{ marginBottom: 20 }}>
           <p style={{ margin: '0 0 8px', color: 'var(--muted)' }}>
             La importación desde Google Drive todavía no está configurada. Para activarla:
           </p>
@@ -257,8 +258,8 @@ export default function Admin() {
         </div>
       )}
       {driveConfigured === true && (
-        <div className="pixel-card" style={{ marginBottom: 20 }}>
-          <button className="pixel-btn" onClick={loadDriveFiles} disabled={driveBusy}>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <button className="btn btn-primary" onClick={loadDriveFiles} disabled={driveBusy}>
             {driveBusy ? 'Listando…' : 'Listar archivos de Drive'}
           </button>
           {driveFiles && driveFiles.length === 0 && (
@@ -271,7 +272,7 @@ export default function Admin() {
                   key={f.id}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    gap: 10, borderBottom: '1px dashed var(--muted)', paddingBottom: 8,
+                    gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8,
                   }}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -281,12 +282,12 @@ export default function Admin() {
                     </span>
                   </span>
                   <button
-                    className="pixel-btn ghost"
+                    className="btn btn-secondary"
                     style={{ flexShrink: 0 }}
                     onClick={() => importFromDrive(f)}
                     disabled={importingId === f.id}
                   >
-                    {importingId === f.id ? 'Importando…' : 'Importar'}
+                    {importingId === f.id ? 'importando…' : 'importar'}
                   </button>
                 </div>
               ))}
@@ -296,25 +297,44 @@ export default function Admin() {
       )}
 
       <div
-        style={{ border: '2px dashed var(--muted)', padding: 24, textAlign: 'center', marginBottom: 20 }}
-        onDragOver={(e) => e.preventDefault()}
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
           e.preventDefault();
+          setDragOver(false);
           const f = e.dataTransfer.files[0];
           if (f) onFile(f);
         }}
+        style={{
+          border: `2px dashed ${dragOver ? 'var(--accent)' : 'var(--border-strong)'}`,
+          borderRadius: 10,
+          padding: 24,
+          textAlign: 'center',
+          marginBottom: 20,
+          cursor: 'pointer',
+          transition: 'border-color 0.15s ease',
+        }}
       >
-        <p style={{ margin: '0 0 8px' }}>Arrastra tu .md exportado de Notion, o sube un .md manualmente</p>
+        <p style={{ margin: '0 0 4px' }}>Arrastra tu archivo .md aquí</p>
+        <p style={{ margin: 0, color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>
+          o haz clic para seleccionar desde tu equipo
+        </p>
         <input
+          ref={fileInputRef}
           type="file"
           accept=".md,.markdown,text/markdown"
-          style={{ width: 'auto' }}
+          style={{ display: 'none' }}
+          onClick={(e) => e.stopPropagation()}
           onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
         />
       </div>
 
       {isFormOpen && (
-        <div className="pixel-card" style={{ marginBottom: 20 }}>
+        <div className="card" style={{ marginBottom: 20 }}>
           <h2 style={{ marginTop: 0 }}>{editingId ? 'Editar post' : 'Nuevo borrador'}</h2>
           <label>Título</label>
           <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value, slug: slugify(e.target.value) })} />
@@ -335,21 +355,21 @@ export default function Admin() {
           <textarea rows={6} value={draft.content_md} onChange={(e) => setDraft({ ...draft, content_md: e.target.value })} />
 
           <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-            <button className="pixel-btn" onClick={saveDraft} disabled={!draft.title || !draft.slug}>
+            <button className="btn btn-primary" onClick={saveDraft} disabled={!draft.title || !draft.slug}>
               {editingId ? 'Guardar cambios' : 'Guardar borrador'}
             </button>
-            <button className="pixel-btn ghost" onClick={() => setShowPreview((v) => !v)}>
-              {showPreview ? 'Ocultar vista previa' : 'Vista previa'}
+            <button className="btn btn-secondary" onClick={() => setShowPreview((v) => !v)}>
+              {showPreview ? 'ocultar vista previa' : 'vista previa'}
             </button>
             {editingId && (
-              <button className="pixel-btn ghost" onClick={cancelEdit}>
-                Cancelar
+              <button className="btn btn-secondary" onClick={cancelEdit}>
+                cancelar
               </button>
             )}
           </div>
 
           {showPreview && (
-            <div className="markdown-body" style={{ marginTop: 16, borderTop: '2px dashed var(--muted)', paddingTop: 16 }}>
+            <div className="markdown-body" style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               {draft.content_md.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                   {draft.content_md}
@@ -364,7 +384,7 @@ export default function Admin() {
 
       {msg && <p style={{ color: msgIsError ? ERROR_COLOR : SUCCESS_COLOR }}>{msg}</p>}
 
-      <h2>Borradores</h2>
+      <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: 15, textTransform: 'uppercase', letterSpacing: 1 }}>Borradores</h2>
       {drafts.length === 0 && <p style={{ color: 'var(--muted)' }}>No hay borradores.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
         {drafts.map((p) => (
@@ -372,23 +392,23 @@ export default function Admin() {
             key={p.id}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'var(--surface)', border: '2px solid var(--text)', padding: '10px 14px', gap: 10, flexWrap: 'wrap',
+              background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', gap: 10, flexWrap: 'wrap',
             }}
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {p.title} <span style={{ color: 'var(--muted)' }}>/{p.slug}</span>
             </span>
             <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-              <span className="tag" style={{ borderColor: 'var(--muted)', color: 'var(--muted)' }}>Borrador</span>
-              <button className="pixel-btn ghost" onClick={() => startEdit(p)}>Editar</button>
-              <button className="pixel-btn" onClick={() => publish(p.id)}>Publicar + email</button>
-              <button className="pixel-btn ghost" onClick={() => remove(p.id)}>Eliminar</button>
+              <span className="tag">borrador</span>
+              <button className="btn btn-secondary" onClick={() => startEdit(p)}>editar</button>
+              <button className="btn btn-primary" onClick={() => publish(p.id)}>Publicar + email</button>
+              <button className="btn btn-secondary" onClick={() => remove(p.id)}>borrar</button>
             </span>
           </div>
         ))}
       </div>
 
-      <h2>Publicados</h2>
+      <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: 15, textTransform: 'uppercase', letterSpacing: 1 }}>Publicados</h2>
       {published.length === 0 && <p style={{ color: 'var(--muted)' }}>No hay posts publicados.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {published.map((p) => (
@@ -396,18 +416,18 @@ export default function Admin() {
             key={p.id}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'var(--surface)', border: '2px solid var(--text)', padding: '10px 14px', gap: 10, flexWrap: 'wrap',
+              background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', gap: 10, flexWrap: 'wrap',
             }}
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {p.title} <span style={{ color: 'var(--muted)' }}>/{p.slug}</span>
             </span>
             <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-              <span style={{ background: 'var(--accent)', color: 'var(--bg)', fontSize: 13, padding: '2px 8px' }}>
-                Publicado
+              <span style={{ background: 'var(--accent)', color: '#fff', fontSize: 11, padding: '3px 9px', borderRadius: 6, fontFamily: 'var(--font-mono)' }}>
+                publicado
               </span>
-              <button className="pixel-btn ghost" onClick={() => startEdit(p)}>Editar</button>
-              <button className="pixel-btn ghost" onClick={() => remove(p.id)}>Eliminar</button>
+              <button className="btn btn-secondary" onClick={() => startEdit(p)}>editar</button>
+              <button className="btn btn-secondary" onClick={() => remove(p.id)}>borrar</button>
             </span>
           </div>
         ))}

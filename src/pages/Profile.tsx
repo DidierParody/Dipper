@@ -5,13 +5,28 @@ export default function Profile() {
   return (
     <div>
       <SignedOut>
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <h1>Perfil</h1>
-          <p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>
-            Inicia sesión para ver tu perfil.
+        <div
+          style={{
+            maxWidth: 420,
+            margin: '40px auto',
+            textAlign: 'center',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 10,
+            padding: 32,
+          }}
+        >
+          <h2 style={{ margin: '0 0 10px', fontSize: 22 }}>Bienvenido de vuelta</h2>
+          <p style={{ color: 'var(--muted)', margin: '0 0 20px' }}>
+            Ingresa para suscribirte al newsletter y recibir cada post nuevo.
           </p>
           <SignInButton mode="modal">
-            <button className="pixel-btn">Login</button>
+            <button
+              className="btn"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', color: 'var(--text)' }}
+            >
+              Ingresar
+            </button>
           </SignInButton>
         </div>
       </SignedOut>
@@ -31,7 +46,7 @@ function ProfileCard() {
   const providers = user.externalAccounts.map((a) => a.provider);
 
   return (
-    <div className="pixel-card" style={{ maxWidth: 480, margin: '24px auto', textAlign: 'center' }}>
+    <div className="card" style={{ maxWidth: 480, margin: '24px auto', textAlign: 'center' }}>
       <img
         src={user.imageUrl}
         alt=""
@@ -61,12 +76,12 @@ function ProfileCard() {
           ))}
         </div>
       )}
-      <hr className="dashed-divider" />
+      <hr className="divider" />
       <div style={{ margin: '16px 0' }}>
         <SubscribeButton />
       </div>
-      <button className="pixel-btn ghost" onClick={() => openUserProfile()}>
-        Gestionar cuenta
+      <button className="btn btn-secondary" onClick={() => openUserProfile()}>
+        gestionar cuenta
       </button>
     </div>
   );

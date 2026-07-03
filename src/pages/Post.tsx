@@ -22,7 +22,7 @@ export default function Post() {
       <div style={{ textAlign: 'center', padding: 40 }}>
         <h1>404</h1>
         <p style={{ color: 'var(--muted)' }}>Este post no existe.</p>
-        <Link to="/" className="pixel-btn ghost" style={{ display: 'inline-block', marginTop: 12 }}>
+        <Link to="/" className="btn btn-secondary" style={{ display: 'inline-block', marginTop: 12 }}>
           ← Volver
         </Link>
       </div>
@@ -36,31 +36,37 @@ export default function Post() {
 
   return (
     <article>
-      <Link to="/" style={{ color: 'var(--muted)', fontSize: 14 }}>← Volver</Link>
+      <Link to="/" style={{ color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>← volver al blog</Link>
       <div style={{ marginBottom: 8, marginTop: 14 }}>
         {post.tags.map((t) => <Link key={t} to={`/tag/${t}`} className="tag">{t}</Link>)}
       </div>
-      <h1 style={{ margin: '10px 0 6px' }}>{post.title}</h1>
-      <p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>
+      <h1 style={{ margin: '10px 0 6px', fontSize: 36 }}>{post.title}</h1>
+      <p style={{ color: 'var(--muted)', margin: '0 0 16px', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
         {date}
         {date && ' · '}
         {minutes} min de lectura
       </p>
       {post.cover_url && (
-        <img src={post.cover_url} alt="" style={{ width: '100%', border: '2px solid var(--text)', marginBottom: 16 }} />
+        <img src={post.cover_url} alt="" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 16 }} />
       )}
-      <hr className="dashed-divider" />
+      <hr className="divider" />
       <div className="markdown-body">
         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
           {post.content_md}
         </ReactMarkdown>
       </div>
       <div
-        className="pixel-card"
-        style={{ marginTop: 32, textAlign: 'center', borderStyle: 'dashed', borderColor: 'var(--accent)' }}
+        style={{
+          marginTop: 32,
+          textAlign: 'center',
+          background: 'var(--surface-2)',
+          border: '2px solid var(--border-strong)',
+          borderRadius: 10,
+          padding: 24,
+        }}
       >
         <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 17, margin: '0 0 12px' }}>
-          ¿Te sirvió? Recibe el próximo en tu correo
+          Bienvenido de vuelta. ¿Te sirvió? Recibe el próximo en tu correo
         </p>
         <SubscribeButton />
       </div>
