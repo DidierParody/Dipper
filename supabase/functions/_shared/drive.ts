@@ -7,7 +7,7 @@ export function driveConfigured(): boolean {
 async function accessToken(): Promise<string> {
   const sa = JSON.parse(Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON')!);
   const key = await importPKCS8(sa.private_key, 'RS256');
-  const jwt = await new SignJWT({ scope: 'https://www.googleapis.com/auth/drive.readonly' })
+  const jwt = await new SignJWT({ scope: 'https://www.googleapis.com/auth/drive' })
     .setProtectedHeader({ alg: 'RS256' })
     .setIssuer(sa.client_email)
     .setAudience('https://oauth2.googleapis.com/token')
@@ -52,4 +52,41 @@ export async function downloadFile(fileId: string): Promise<string> {
   );
   if (!res.ok) throw new Error(`drive download ${res.status}`);
   return await res.text();
+}
+
+export async function uploadMdFile(name: string, content: string): Promise<string> {
+  const token = await accessToken();
+  const metadata = { name, parents: [Deno.env.get('DRIVE_FOLDER_ID')!], mimeType: 'text/markdown' };
+  const boundary = 'dipper' + crypto.randomUUID();
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+    JSON.stringify(metadata) +
+    `\r\n--${boundary}\r\nContent-Type: text/markdown\r\n\r\n` +
+    content + `\r\n--${boundary}--`;
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  });
+  if (!res.ok) throw new Error(`drive upload ${res.status}: el service account necesita permiso de Editor en la carpeta`);
+  return (await res.json()).id;
+}
+
+export async function updateMdFile(fileId: string, content: string): Promise<void> {
+  const token = await accessToken();
+  const res = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media`,
+    { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/markdown' }, body: content }
+  );
+  if (!res.ok) throw new Error(`drive update ${res.status}`);
+}
+
+export async function trashFile(fileId: string): Promise<boolean> {
+  const token = await accessToken();
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: true }),
+  });
+  return res.ok; // tolerante: archivos de Didier no pueden ser borrados por el SA
 }

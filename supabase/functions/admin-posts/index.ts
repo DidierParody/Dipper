@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { verifyClerkToken, getClerkEmail } from '../_shared/clerk.ts';
 import { makeUnsubToken } from '../_shared/unsub-token.ts';
-import { driveConfigured, listMdFiles, downloadFile } from '../_shared/drive.ts';
+import { driveConfigured, listMdFiles, downloadFile, uploadMdFile, updateMdFile, trashFile } from '../_shared/drive.ts';
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -22,6 +22,11 @@ function parseMd(md: string): { title: string; body: string } {
     .join('\n')
     .trim();
   return { title, body };
+}
+
+function calcReadingMinutes(md: string): number {
+  const words = md.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 220));
 }
 
 function slugify(text: string): string {
@@ -121,14 +126,19 @@ Deno.serve(async (req) => {
       if (!driveConfigured()) return json({ error: 'drive no configurado' }, 400);
       const { file_id, name } = body;
       if (!file_id) return json({ error: 'file_id requerido' }, 400);
+      const { data: existing, error: existingErr } = await db.from('posts')
+        .select('id').eq('drive_file_id', file_id).maybeSingle();
+      if (existingErr) throw existingErr;
+      if (existing) return json({ error: 'ya importado' }, 400);
       const raw = await downloadFile(file_id);
       if (raw.length > 1_000_000) return json({ error: 'md demasiado grande (max 1MB)' }, 400);
       const { title: h1Title, body: content_md } = parseMd(raw);
       const title = h1Title || (name ?? '').replace(/\.md$/i, '') || 'sin-titulo';
       const baseSlug = slugify(title) || 'post';
       const slug = await uniqueSlug(baseSlug);
+      const reading_minutes = calcReadingMinutes(content_md);
       const { data, error } = await db.from('posts')
-        .insert({ title, slug, description: null, content_md, tags: [] })
+        .insert({ title, slug, description: null, drive_file_id: file_id, tags: [], reading_minutes })
         .select('id').single();
       if (error) throw error;
       return json({ id: data.id, slug, title });
@@ -144,32 +154,51 @@ Deno.serve(async (req) => {
 
     if (body.action === 'list') {
       const { data, error } = await db.from('posts')
-        .select('id,slug,title,description,tags,status,published_at,created_at')
+        .select('id,slug,title,description,tags,status,published_at,created_at,drive_file_id,reading_minutes')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return json({ posts: data });
+    }
+
+    if (body.action === 'get_content') {
+      const { id } = body;
+      if (!id) return json({ error: 'id requerido' }, 400);
+      const { data: post, error } = await db.from('posts')
+        .select('drive_file_id').eq('id', id).single();
+      if (error) throw error;
+      if (!post?.drive_file_id) return json({ error: 'post sin contenido en drive' }, 400);
+      const content = await downloadFile(post.drive_file_id);
+      return json({ content });
     }
 
     if (body.action === 'create') {
       const { title, slug, description, content_md, tags, cover_url } = body.post ?? {};
       if (!title || !slug || !content_md) return json({ error: 'title, slug y content_md requeridos' }, 400);
       if (content_md.length > 1_000_000) return json({ error: 'md demasiado grande (max 1MB)' }, 400);
+      const drive_file_id = await uploadMdFile(`${slug}.md`, content_md);
+      const reading_minutes = calcReadingMinutes(content_md);
       const { data, error } = await db.from('posts')
-        .insert({ title, slug, description, content_md, tags: tags ?? [], cover_url })
+        .insert({ title, slug, description, drive_file_id, tags: tags ?? [], cover_url, reading_minutes })
         .select('id').single();
       if (error) throw error;
       return json({ id: data.id });
     }
 
     if (body.action === 'update') {
-      const { id, ...fields } = body.post ?? {};
+      const { id, content_md, ...fields } = body.post ?? {};
       if (!id) return json({ error: 'id requerido' }, 400);
-      const allowed = ['title', 'slug', 'description', 'content_md', 'tags', 'cover_url'];
-      const patch = Object.fromEntries(
+      const allowed = ['title', 'slug', 'description', 'tags', 'cover_url'];
+      const patch: Record<string, unknown> = Object.fromEntries(
         Object.entries(fields).filter(([k]) => allowed.includes(k))
       );
-      if (typeof patch.content_md === 'string' && patch.content_md.length > 1_000_000) {
-        return json({ error: 'md demasiado grande (max 1MB)' }, 400);
+      if (typeof content_md === 'string' && content_md.length > 0) {
+        if (content_md.length > 1_000_000) return json({ error: 'md demasiado grande (max 1MB)' }, 400);
+        const { data: post, error: postErr } = await db.from('posts')
+          .select('drive_file_id').eq('id', id).single();
+        if (postErr) throw postErr;
+        if (!post?.drive_file_id) return json({ error: 'post sin contenido en drive' }, 400);
+        await updateMdFile(post.drive_file_id, content_md);
+        patch.reading_minutes = calcReadingMinutes(content_md);
       }
       const { error } = await db.from('posts').update(patch).eq('id', id);
       if (error) throw error;
@@ -190,8 +219,18 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === 'delete') {
+      const { data: post, error: postErr } = await db.from('posts')
+        .select('drive_file_id').eq('id', body.id).maybeSingle();
+      if (postErr) throw postErr;
       const { error } = await db.from('posts').delete().eq('id', body.id);
       if (error) throw error;
+      if (post?.drive_file_id) {
+        try {
+          await trashFile(post.drive_file_id);
+        } catch {
+          // best-effort: ignorar fallo al mover a papelera
+        }
+      }
       return json({ ok: true });
     }
 
