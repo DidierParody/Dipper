@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchPublishedPosts, type Post } from '../lib/supabase';
-import { readingTime } from '../lib/reading-time';
 
 interface HomeProps {
   search: string;
@@ -92,7 +91,7 @@ export default function Home({ search }: HomeProps) {
           const date = post.published_at
             ? new Date(post.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })
             : '';
-          const minutes = readingTime(post.content_md);
+          const minutes = post.reading_minutes;
           return (
             <div key={post.id} className="post-card" onClick={() => navigate(`/post/${post.slug}`)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

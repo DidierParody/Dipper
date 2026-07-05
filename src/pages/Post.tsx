@@ -1,21 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { fetchPostBySlug, type Post as PostType } from '../lib/supabase';
+import { fetchPostBySlug, fetchPostContent, type Post as PostType } from '../lib/supabase';
 import SubscribeButton from '../components/SubscribeButton';
-import { readingTime } from '../lib/reading-time';
 
 export default function Post() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState<PostType | null | 'loading'>('loading');
+  const [content, setContent] = useState<string | null>(null);
+  const [contentError, setContentError] = useState(false);
+  const [contentLoading, setContentLoading] = useState(false);
+
+  const loadContent = useCallback((s: string) => {
+    setContentLoading(true);
+    setContentError(false);
+    setContent(null);
+    fetchPostContent(s)
+      .then((md) => setContent(md))
+      .catch(() => setContentError(true))
+      .finally(() => setContentLoading(false));
+  }, []);
 
   useEffect(() => {
     setPost('loading');
-    if (slug) fetchPostBySlug(slug).then((p) => setPost(p)).catch(() => setPost(null));
-  }, [slug]);
+    if (!slug) return;
+    fetchPostBySlug(slug).then((p) => setPost(p)).catch(() => setPost(null));
+    loadContent(slug);
+  }, [slug, loadContent]);
 
   if (post === 'loading') {
     return (
@@ -52,7 +66,7 @@ export default function Post() {
   const date = post.published_at
     ? new Date(post.published_at).toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
-  const minutes = readingTime(post.content_md);
+  const minutes = post.reading_minutes;
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
@@ -138,9 +152,26 @@ export default function Post() {
       )}
 
       <div className="markdown-body">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-          {post.content_md}
-        </ReactMarkdown>
+        {contentLoading && (
+          <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace" }}>Cargando...</p>
+        )}
+        {contentError && (
+          <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace" }}>
+            No se pudo cargar el contenido.{' '}
+            <span
+              className="back-link"
+              onClick={() => slug && loadContent(slug)}
+              style={{ cursor: 'pointer', color: '#3b82f6' }}
+            >
+              reintentar
+            </span>
+          </p>
+        )}
+        {!contentLoading && !contentError && content !== null && (
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+            {content}
+          </ReactMarkdown>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 40, paddingTop: 24, borderTop: '1px solid #1c2438' }}>

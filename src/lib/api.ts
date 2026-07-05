@@ -36,4 +36,5 @@ export const adminApi = {
   driveImport: (token: string, file_id: string, name: string) =>
     call('admin-posts', { action: 'drive_import', file_id, name }, token),
   stats: (token: string) => call('admin-posts', { action: 'stats' }, token),
+  getContent: (token: string, id: string) => call('admin-posts', { action: 'get_content', id }, token),
 };

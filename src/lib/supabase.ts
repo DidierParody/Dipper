@@ -5,7 +5,7 @@ export interface Post {
   slug: string;
   title: string;
   description: string | null;
-  content_md: string;
+  reading_minutes: number;
   cover_url: string | null;
   tags: string[];
   status: 'draft' | 'published';
@@ -21,7 +21,7 @@ export const supabase = createClient(
 export async function fetchPublishedPosts(tag?: string): Promise<Post[]> {
   let q = supabase
     .from('posts')
-    .select('id,slug,title,description,cover_url,tags,status,published_at,created_at,content_md')
+    .select('id,slug,title,description,cover_url,tags,status,published_at,created_at,reading_minutes')
     .eq('status', 'published')
     .order('published_at', { ascending: false });
   if (tag) q = q.contains('tags', [tag]);
@@ -32,7 +32,17 @@ export async function fetchPublishedPosts(tag?: string): Promise<Post[]> {
 
 export async function fetchPostBySlug(slug: string): Promise<Post | null> {
   const { data, error } = await supabase
-    .from('posts').select('*').eq('slug', slug).eq('status', 'published').maybeSingle();
+    .from('posts')
+    .select('id,slug,title,description,cover_url,tags,status,published_at,created_at,reading_minutes')
+    .eq('slug', slug).eq('status', 'published').maybeSingle();
   if (error) throw error;
   return data as Post | null;
+}
+
+export async function fetchPostContent(slug: string): Promise<string> {
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-content?slug=${encodeURIComponent(slug)}`
+  );
+  if (!res.ok) throw new Error(`content ${res.status}`);
+  return res.text();
 }
