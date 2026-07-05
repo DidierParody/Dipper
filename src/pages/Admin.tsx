@@ -73,6 +73,8 @@ export default function Admin() {
   const [importingId, setImportingId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin =
@@ -151,7 +153,7 @@ export default function Admin() {
     });
   }
 
-  function startEdit(p: AdminPost) {
+  async function startEdit(p: AdminPost) {
     setEditingId(p.id);
     setDraft({
       title: p.title,
@@ -162,6 +164,16 @@ export default function Admin() {
     });
     setShowPreview(false);
     setStatus('');
+    setContentLoading(true);
+    try {
+      const token = await getToken();
+      const { content } = await adminApi.getContent(token!, p.id);
+      setDraft((d) => ({ ...d, content_md: content ?? '' }));
+    } catch (e) {
+      setStatus(`Error cargando contenido: ${e}`, true);
+    } finally {
+      setContentLoading(false);
+    }
   }
 
   function cancelEdit() {
@@ -201,6 +213,7 @@ export default function Admin() {
   }
 
   async function saveDraft() {
+    setSaving(true);
     setStatus('Guardando...');
     try {
       const token = await getToken();
@@ -233,6 +246,53 @@ export default function Admin() {
       refresh();
     } catch (e) {
       setStatus(`Error: ${e}`, true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function publishNew() {
+    const n = subscribers ?? 0;
+    if (!confirm(`Esto enviará un email a ${n} suscriptor${n === 1 ? '' : 'es'}. ¿Publicar de todas formas?`)) return;
+    setSaving(true);
+    setStatus('Guardando y publicando...');
+    try {
+      const token = await getToken();
+      const tags = draft.tags.split(',').map((t) => t.trim()).filter(Boolean);
+
+      let id = editingId;
+      if (editingId) {
+        const patch: Record<string, unknown> = {
+          id: editingId,
+          title: draft.title,
+          slug: draft.slug,
+          description: draft.description,
+          tags,
+        };
+        if (draft.content_md.trim()) patch.content_md = draft.content_md;
+        await adminApi.update(token!, patch);
+      } else {
+        const r = await adminApi.create(token!, {
+          title: draft.title,
+          slug: draft.slug,
+          description: draft.description,
+          content_md: draft.content_md,
+          tags,
+        });
+        id = r.id;
+      }
+      if (!id) throw new Error('no se obtuvo el id del post');
+      setStatus('Publicando y enviando newsletter...');
+      const r = await adminApi.publish(token!, id);
+      setStatus(`Publicado. Newsletter: ${r.newsletter.sent} enviados, ${r.newsletter.failed} fallos.`);
+      setEditingId(null);
+      setDraft(emptyDraft);
+      setShowPreview(false);
+      refresh();
+    } catch (e) {
+      setStatus(`Error: ${e}`, true);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -259,11 +319,12 @@ export default function Admin() {
 
   const drafts = posts.filter((p) => p.status === 'draft');
   const published = posts.filter((p) => (p.status as string) === 'published');
-  const isFormOpen = editingId !== null || draft.content_md !== '' || draft.title !== '';
-  const canPublish = !!draft.title && !!draft.slug;
+  const canPublish = !!draft.title && !!draft.slug && !!draft.content_md.trim();
+  const readyToSave = !!draft.title && !!draft.slug;
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '56px 32px 120px' }}>
+      {/* 1. header */}
       <div
         style={{
           fontFamily: "'IBM Plex Mono',monospace",
@@ -279,55 +340,11 @@ export default function Admin() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>Publicar nuevo post</h1>
         <span style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5 }}>
-          {subscribers === null ? 'Cargando suscriptores…' : `${subscribers} suscriptor${subscribers === 1 ? '' : 'es'} activo${subscribers === 1 ? '' : 's'}`}
+          {subscribers === null ? 'Cargando suscriptores…' : `${subscribers} suscriptor${subscribers === 1 ? '' : 'es'}`}
         </span>
       </div>
 
-      <SectionHeader>importar desde drive</SectionHeader>
-      {driveConfigured === false && (
-        <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
-          <p style={{ margin: '0 0 8px', color: '#8b96b2', fontSize: 13.5 }}>
-            La importación desde Google Drive todavía no está configurada. Para activarla:
-          </p>
-          <ol style={{ color: '#8b96b2', margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
-            <li>Crear una service account de Google con acceso a la API de Drive.</li>
-            <li>Compartir la carpeta de Drive con el email de esa service account.</li>
-            <li>Pasarle el JSON de la service account a Claude para configurar los secrets.</li>
-          </ol>
-        </div>
-      )}
-      {driveConfigured === true && (
-        <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
-          <button className="admin-chip-btn" onClick={loadDriveFiles} disabled={driveBusy}>
-            {driveBusy ? 'Listando…' : 'Listar archivos de Drive'}
-          </button>
-          {driveFiles && driveFiles.length === 0 && (
-            <p style={{ color: '#5b6a8f', marginTop: 12, fontSize: 13.5 }}>No hay archivos .md en la carpeta.</p>
-          )}
-          {driveFiles && driveFiles.length > 0 && (
-            <div style={{ marginTop: 14, border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden' }}>
-              {driveFiles.map((f) => (
-                <div key={f.id} className="admin-row">
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: 14 }}>
-                    {f.name}{' '}
-                    <span style={{ color: '#5b6a8f', fontSize: 11.5, fontFamily: "'IBM Plex Mono',monospace" }}>
-                      {new Date(f.modifiedTime).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
-                  </span>
-                  <button
-                    className="admin-chip-btn"
-                    onClick={() => importFromDrive(f)}
-                    disabled={importingId === f.id}
-                  >
-                    {importingId === f.id ? 'importando…' : 'importar'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* 2. dropzone */}
       <div
         className={`dropzone${dragOver ? ' drag-active' : ''}`}
         onClick={() => fileInputRef.current?.click()}
@@ -403,84 +420,98 @@ export default function Admin() {
         />
       </div>
 
-      {isFormOpen && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <div>
-              <label>Título</label>
-              <input
-                value={draft.title}
-                placeholder="ej. Diseñando un lakehouse desde cero"
-                onChange={(e) => setDraft({ ...draft, title: e.target.value, slug: slugify(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label>Etiqueta</label>
-              <input
-                value={draft.tags}
-                placeholder="ej. Data Engineering, Cloud"
-                onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
-              />
-            </div>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label>Descripción (para cards y el correo)</label>
-            <input
-              value={draft.description}
-              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label>
-              Contenido ({draft.content_md.length} caracteres)
-              {editingId && (
-                <span style={{ display: 'block', color: '#5b6a8f', textTransform: 'none', letterSpacing: 0, marginTop: 4 }}>
-                  Deja el contenido vacío para conservar el actual.
-                </span>
-              )}
-            </label>
-            <textarea rows={8} value={draft.content_md} onChange={(e) => setDraft({ ...draft, content_md: e.target.value })} />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-            <div
-              onClick={saveDraft}
-              style={{
-                cursor: canPublish ? 'pointer' : 'not-allowed',
-                display: 'inline-block',
-                background: canPublish ? '#3b82f6' : '#1c2438',
-                color: canPublish ? '#06101f' : '#5b6a8f',
-                fontWeight: 600,
-                fontSize: 14,
-                padding: '12px 26px',
-                borderRadius: 8,
-              }}
-            >
-              {editingId ? 'Guardar cambios' : 'Publicar post'}
-            </div>
-            <button className="admin-chip-btn" onClick={() => setShowPreview((v) => !v)}>
-              {showPreview ? 'ocultar vista previa' : 'vista previa'}
-            </button>
-            {editingId && (
-              <button className="admin-chip-btn" onClick={cancelEdit}>
-                cancelar
-              </button>
+      {/* 3. form grid: titulo | etiquetas, descripcion, contenido */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div>
+          <label>Título</label>
+          <input
+            value={draft.title}
+            placeholder="ej. Diseñando un lakehouse desde cero"
+            onChange={(e) => setDraft({ ...draft, title: e.target.value, slug: slugify(e.target.value) })}
+          />
+        </div>
+        <div>
+          <label>Etiquetas</label>
+          <input
+            value={draft.tags}
+            placeholder="ej. Data Engineering, Cloud"
+            onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+          />
+        </div>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <label>Descripción (para cards y el correo)</label>
+        <input
+          value={draft.description}
+          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+        />
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <label style={{ margin: 0 }}>Contenido ({draft.content_md.length} caracteres)</label>
+          <span
+            onClick={() => setShowPreview((v) => !v)}
+            style={{
+              cursor: 'pointer',
+              color: '#5b6a8f',
+              fontFamily: "'IBM Plex Mono',monospace",
+              fontSize: 12.5,
+              marginBottom: 6,
+            }}
+          >
+            vista previa
+          </span>
+        </div>
+        {contentLoading && (
+          <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 13 }}>Cargando contenido...</p>
+        )}
+        {!showPreview && !contentLoading && (
+          <textarea rows={8} value={draft.content_md} onChange={(e) => setDraft({ ...draft, content_md: e.target.value })} />
+        )}
+        {showPreview && !contentLoading && (
+          <div className="markdown-body" style={{ marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            {draft.content_md.trim() ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                {draft.content_md}
+              </ReactMarkdown>
+            ) : (
+              <p style={{ color: '#5b6a8f' }}>Nada que previsualizar todavía.</p>
             )}
           </div>
+        )}
+      </div>
 
-          {showPreview && (
-            <div className="markdown-body" style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              {draft.content_md.trim() ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                  {draft.content_md}
-                </ReactMarkdown>
-              ) : (
-                <p style={{ color: '#5b6a8f' }}>Deja el contenido vacío para conservar el actual.</p>
-              )}
-            </div>
-          )}
+      {/* 4. botones + mensaje */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={saveDraft}
+          disabled={!readyToSave || saving}
+        >
+          Guardar borrador
+        </button>
+        <div
+          onClick={() => canPublish && !saving && publishNew()}
+          style={{
+            cursor: canPublish && !saving ? 'pointer' : 'not-allowed',
+            display: 'inline-block',
+            background: canPublish ? '#3b82f6' : '#1c2438',
+            color: canPublish ? '#06101f' : '#5b6a8f',
+            fontWeight: 600,
+            fontSize: 14,
+            padding: '12px 26px',
+            borderRadius: 8,
+          }}
+        >
+          Publicar post
         </div>
-      )}
+        {editingId && (
+          <button type="button" className="admin-chip-btn" onClick={cancelEdit}>
+            cancelar
+          </button>
+        )}
+      </div>
 
       {msg && (
         <p style={{ color: msgIsError ? ERROR_COLOR : SUCCESS_COLOR, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, marginBottom: 20 }}>
@@ -488,6 +519,55 @@ export default function Admin() {
         </p>
       )}
 
+      {/* 5. importar desde drive */}
+      <div style={{ marginTop: 44 }}>
+        <SectionHeader>importar desde drive</SectionHeader>
+        {driveConfigured === false && (
+          <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
+            <p style={{ margin: '0 0 8px', color: '#8b96b2', fontSize: 13.5 }}>
+              La importación desde Google Drive todavía no está configurada. Para activarla:
+            </p>
+            <ol style={{ color: '#8b96b2', margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
+              <li>Crear una service account de Google con acceso a la API de Drive.</li>
+              <li>Compartir la carpeta de Drive con el email de esa service account.</li>
+              <li>Pasarle el JSON de la service account a Claude para configurar los secrets.</li>
+            </ol>
+          </div>
+        )}
+        {driveConfigured === true && (
+          <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
+            <button className="admin-chip-btn" onClick={loadDriveFiles} disabled={driveBusy}>
+              {driveBusy ? 'Listando…' : 'Listar archivos de Drive'}
+            </button>
+            {driveFiles && driveFiles.length === 0 && (
+              <p style={{ color: '#5b6a8f', marginTop: 12, fontSize: 13.5 }}>No hay archivos .md en la carpeta.</p>
+            )}
+            {driveFiles && driveFiles.length > 0 && (
+              <div style={{ marginTop: 14, border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden' }}>
+                {driveFiles.map((f) => (
+                  <div key={f.id} className="admin-row">
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: 14 }}>
+                      {f.name}{' '}
+                      <span style={{ color: '#5b6a8f', fontSize: 11.5, fontFamily: "'IBM Plex Mono',monospace" }}>
+                        {new Date(f.modifiedTime).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                    </span>
+                    <button
+                      className="admin-chip-btn"
+                      onClick={() => importFromDrive(f)}
+                      disabled={importingId === f.id}
+                    >
+                      {importingId === f.id ? 'importando…' : 'importar'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 6. borradores */}
       <div style={{ marginTop: 44 }}>
         <SectionHeader>borradores ({drafts.length})</SectionHeader>
         {drafts.length === 0 && <p style={{ color: '#5b6a8f', fontSize: 13.5 }}>No hay borradores.</p>}
@@ -511,6 +591,9 @@ export default function Admin() {
                 <span style={{ fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.title} <span style={{ color: '#5b6a8f' }}>/{p.slug}</span>
                 </span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: '#5b6a8f' }}>
+                  {p.published_at ? new Date(p.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                </span>
                 <button className="admin-action" onClick={() => publish(p.id)} style={{ color: '#8fd0ff' }}>
                   publicar
                 </button>
@@ -520,7 +603,10 @@ export default function Admin() {
             ))}
           </div>
         )}
+      </div>
 
+      {/* 7. posts publicados */}
+      <div>
         <SectionHeader>posts publicados ({published.length})</SectionHeader>
         {published.length === 0 && <p style={{ color: '#5b6a8f', fontSize: 13.5 }}>No hay posts publicados.</p>}
         {published.length > 0 && (
