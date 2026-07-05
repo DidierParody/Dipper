@@ -1,10 +1,28 @@
 import { SignJWT, importPKCS8 } from 'npm:jose@5';
 
 export function driveConfigured(): boolean {
-  return !!(Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON') && Deno.env.get('DRIVE_FOLDER_ID'));
+  const auth = Deno.env.get('GOOGLE_REFRESH_TOKEN') || Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+  return !!(auth && Deno.env.get('DRIVE_FOLDER_ID'));
 }
 
 async function accessToken(): Promise<string> {
+  // Preferir OAuth del autor: los archivos quedan a su nombre y usan su cuota.
+  // Los service accounts ya no tienen cuota de almacenamiento en Drive (403 al subir).
+  const refreshToken = Deno.env.get('GOOGLE_REFRESH_TOKEN');
+  if (refreshToken) {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: Deno.env.get('GOOGLE_OAUTH_CLIENT_ID')!,
+        client_secret: Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')!,
+        refresh_token: refreshToken,
+      }),
+    });
+    if (!res.ok) throw new Error(`google token ${res.status}`);
+    return (await res.json()).access_token;
+  }
   const sa = JSON.parse(Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON')!);
   const key = await importPKCS8(sa.private_key, 'RS256');
   const jwt = await new SignJWT({ scope: 'https://www.googleapis.com/auth/drive' })
