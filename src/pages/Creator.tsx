@@ -67,9 +67,9 @@ export default function Creator() {
       </div>
 
       <p style={{ fontSize: 15.5, lineHeight: 1.8, color: '#c7cfe2', maxWidth: 640, margin: '0 0 32px' }}>
-        Llevo años trabajando en ingeniería de datos y arquitectura cloud — desde pipelines de ingestión
-        hasta plataformas de ML en producción. Este blog es mi cuaderno público: lo que aprendo, lo que
-        rompo y lo que finalmente funciona.
+        Soy un apasionado por la innovación en la tecnología con un hambre voraz de conocimiento y nunca
+        me faltan las ganas de compartirlo. Amo el mundo de los datos, la música a todo volumen y las
+        conversaciones de provecho — espero que disfrutes la bitácora de mi travesía.
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, maxWidth: 460, marginBottom: 36 }}>
@@ -139,12 +139,20 @@ export default function Creator() {
         >
           GitHub ↗
         </a>
-        {/* TODO: URL real */}
-        <a className="social-chip" href="#">
+        <a
+          className="social-chip"
+          href="https://www.linkedin.com/in/didier-jose-torres-parodis-301b93344"
+          target="_blank"
+          rel="noreferrer"
+        >
           LinkedIn ↗
         </a>
-        {/* TODO: URL real */}
-        <a className="social-chip" href="#">
+        <a
+          className="social-chip"
+          href="https://x.com/DidierParodi"
+          target="_blank"
+          rel="noreferrer"
+        >
           X / Twitter ↗
         </a>
       </div>
