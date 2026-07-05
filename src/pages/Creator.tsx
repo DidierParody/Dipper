@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchPublishedPosts, type Post } from '../lib/supabase';
 
-const TAG_LIST_FALLBACK = [
-  'Cloud Engineering',
+const EXPERTISE = [
   'Data Engineering',
-  'AI/ML Engineering',
+  'Cloud Engineering (AWS, GCP)',
   'Data Warehousing',
-  'Ciberseguridad',
-  'Backend',
+  'IA Engineering',
+  'Business Intelligence (dashboards)',
 ];
 
 export default function Creator() {
@@ -20,10 +19,10 @@ export default function Creator() {
   }, []);
 
   const tags = useMemo(() => {
-    if (!posts || posts.length === 0) return TAG_LIST_FALLBACK;
+    if (!posts) return [];
     const set = new Set<string>();
     posts.forEach((p) => p.tags.forEach((t) => set.add(t)));
-    return Array.from(set).sort();
+    return Array.from(set);
   }, [posts]);
 
   const postsCount = posts?.length ?? 0;
@@ -72,7 +71,7 @@ export default function Creator() {
         conversaciones de provecho — espero que disfrutes la bitácora de mi travesía.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, maxWidth: 460, marginBottom: 36 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, maxWidth: 310, marginBottom: 36 }}>
         <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, textAlign: 'center' }}>
           <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{postsCount}</div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f', marginTop: 4 }}>
@@ -83,12 +82,6 @@ export default function Creator() {
           <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{tagsCount}</div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f', marginTop: 4 }}>
             etiquetas
-          </div>
-        </div>
-        <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, textAlign: 'center' }}>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>8+</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f', marginTop: 4 }}>
-            años exp.
           </div>
         </div>
       </div>
@@ -111,7 +104,7 @@ export default function Creator() {
           Áreas de foco
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {tags.map((t) => (
+          {EXPERTISE.map((t) => (
             <div
               key={t}
               style={{
