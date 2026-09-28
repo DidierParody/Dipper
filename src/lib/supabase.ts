@@ -1,16 +1,42 @@
 import { createClient } from '@supabase/supabase-js';
 
+export interface PostTag {
+  slug: string;
+  name: string;
+}
+
+export interface PostSeriesRef {
+  slug: string;
+  title: string;
+}
+
+export interface PostSource {
+  repo: string;
+  path: string;
+  commit_sha: string;
+}
+
 export interface Post {
   id: string;
   slug: string;
   title: string;
-  description: string | null;
+  summary: string | null;
+  cover_path: string | null;
   reading_minutes: number;
-  cover_url: string | null;
-  tags: string[];
   status: 'draft' | 'published';
   published_at: string | null;
   created_at: string;
+  updated_at: string;
+  series: PostSeriesRef | null;
+  series_order: number | null;
+  tags: PostTag[];
+  source: PostSource;
+}
+
+export interface SeriesInfo {
+  slug: string;
+  title: string;
+  description: string | null;
 }
 
 export const supabase = createClient(
@@ -18,31 +44,125 @@ export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-export async function fetchPublishedPosts(tag?: string): Promise<Post[]> {
-  let q = supabase
+const POST_SELECT =
+  'id,slug,title,summary,cover_path,reading_minutes,status,published_at,created_at,updated_at,series_order,' +
+  'series(slug,title),post_tags(tags(slug,name)),post_sources(repo,path,commit_sha)';
+
+interface RawTag {
+  slug: string;
+  name: string;
+}
+
+interface RawSeries {
+  slug: string;
+  title: string;
+  description?: string | null;
+}
+
+interface RawPostSource {
+  repo: string;
+  path: string;
+  commit_sha: string;
+}
+
+interface RawPost {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  cover_path: string | null;
+  reading_minutes: number;
+  status: 'draft' | 'published';
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  series_order: number | null;
+  series: RawSeries | RawSeries[] | null;
+  post_tags: { tags: RawTag | RawTag[] | null }[] | null;
+  post_sources: RawPostSource | RawPostSource[] | null;
+}
+
+/**
+ * Supabase embeds can come back as a single object or as an array depending
+ * on how the relationship is inferred; this normalizes either shape to a
+ * single value (or null).
+ */
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function mapPost(row: RawPost): Post | null {
+  const source = one(row.post_sources);
+  if (!source) return null; // a published post must have a source; guard against inconsistent rows
+
+  const series = one(row.series);
+  const tags = (row.post_tags ?? [])
+    .map((pt) => one(pt.tags))
+    .filter((t): t is RawTag => !!t);
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    summary: row.summary,
+    cover_path: row.cover_path,
+    reading_minutes: row.reading_minutes,
+    status: row.status,
+    published_at: row.published_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    series: series ? { slug: series.slug, title: series.title } : null,
+    series_order: row.series_order,
+    tags,
+    source: { repo: source.repo, path: source.path, commit_sha: source.commit_sha },
+  };
+}
+
+export async function fetchPublishedPosts(): Promise<Post[]> {
+  const { data, error } = await supabase
     .from('posts')
-    .select('id,slug,title,description,cover_url,tags,status,published_at,created_at,reading_minutes')
+    .select(POST_SELECT)
     .eq('status', 'published')
     .order('published_at', { ascending: false });
-  if (tag) q = q.contains('tags', [tag]);
-  const { data, error } = await q;
   if (error) throw error;
-  return data as Post[];
+  return (data as unknown as RawPost[]).map(mapPost).filter((p): p is Post => !!p);
 }
 
 export async function fetchPostBySlug(slug: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from('posts')
-    .select('id,slug,title,description,cover_url,tags,status,published_at,created_at,reading_minutes')
-    .eq('slug', slug).eq('status', 'published').maybeSingle();
+    .select(POST_SELECT)
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle();
   if (error) throw error;
-  return data as Post | null;
+  if (!data) return null;
+  return mapPost(data as unknown as RawPost);
 }
 
-export async function fetchPostContent(slug: string): Promise<string> {
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-content?slug=${encodeURIComponent(slug)}`
-  );
-  if (!res.ok) throw new Error(`content ${res.status}`);
-  return res.text();
+export async function fetchSeriesPosts(
+  seriesSlug: string
+): Promise<{ series: SeriesInfo; posts: Post[] } | null> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(
+      'id,slug,title,summary,cover_path,reading_minutes,status,published_at,created_at,updated_at,series_order,' +
+        'series!inner(slug,title,description),post_tags(tags(slug,name)),post_sources(repo,path,commit_sha)'
+    )
+    .eq('status', 'published')
+    .eq('series.slug', seriesSlug)
+    .order('series_order', { ascending: true });
+  if (error) throw error;
+  if (!data || data.length === 0) return null;
+
+  const rows = data as unknown as RawPost[];
+  const posts = rows.map(mapPost).filter((p): p is Post => !!p);
+  const seriesRow = one(rows[0].series);
+  if (!seriesRow) return null;
+
+  return {
+    series: { slug: seriesRow.slug, title: seriesRow.title, description: seriesRow.description ?? null },
+    posts,
+  };
 }

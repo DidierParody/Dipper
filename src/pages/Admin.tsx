@@ -1,37 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import { adminApi } from '../lib/api';
-import { parseNotionMd, slugify } from '../lib/md';
-
-interface AdminPost {
-  id: string;
-  slug: string;
-  title: string;
-  description: string | null;
-  tags: string[];
-  status: 'draft' | 'published';
-  published_at: string | null;
-}
-
-interface Draft {
-  title: string;
-  slug: string;
-  description: string;
-  tags: string;
-  content_md: string;
-}
-
-interface DriveFile {
-  id: string;
-  name: string;
-  modifiedTime: string;
-  size?: string;
-}
-
-const emptyDraft: Draft = { title: '', slug: '', description: '', tags: '', content_md: '' };
+import { adminApi, type AdminPost } from '../lib/api';
 
 const SUCCESS_COLOR = '#8fd0ff';
 const ERROR_COLOR = '#e05252';
@@ -57,25 +26,30 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+function formatRelative(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  if (diffSec < 60) return 'hace instantes';
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `hace ${diffMin} min`;
+  const diffHour = Math.round(diffMin / 60);
+  if (diffHour < 24) return `hace ${diffHour} h`;
+  const diffDay = Math.round(diffHour / 24);
+  if (diffDay < 30) return `hace ${diffDay} d`;
+  return new Date(iso).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 export default function Admin() {
   const { getToken } = useAuth();
   const { user, isLoaded } = useUser();
   const [posts, setPosts] = useState<AdminPost[]>([]);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [link, setLink] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [msgIsError, setMsgIsError] = useState(false);
   const [denied, setDenied] = useState(false);
   const [subscribers, setSubscribers] = useState<number | null>(null);
-  const [driveConfigured, setDriveConfigured] = useState<boolean | null>(null);
-  const [driveFiles, setDriveFiles] = useState<DriveFile[] | null>(null);
-  const [driveBusy, setDriveBusy] = useState(false);
-  const [importingId, setImportingId] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [contentLoading, setContentLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin =
     user?.primaryEmailAddress?.emailAddress?.toLowerCase() ===
@@ -107,23 +81,12 @@ export default function Admin() {
     }
   }, [getToken]);
 
-  const refreshDriveStatus = useCallback(async () => {
-    try {
-      const token = await getToken();
-      const { configured } = await adminApi.driveStatus(token!);
-      setDriveConfigured(configured);
-    } catch {
-      setDriveConfigured(false);
-    }
-  }, [getToken]);
-
   useEffect(() => {
     if (isLoaded && isAdmin) {
       refresh();
       refreshStats();
-      refreshDriveStatus();
     }
-  }, [isLoaded, isAdmin, refresh, refreshStats, refreshDriveStatus]);
+  }, [isLoaded, isAdmin, refresh, refreshStats]);
 
   if (!isLoaded) return null;
   if (!isAdmin || denied) {
@@ -136,169 +99,42 @@ export default function Admin() {
     );
   }
 
-  function onFile(file: File) {
-    if (file.size > 1_000_000) return setStatus('Archivo demasiado grande (máx 1 MB).', true);
-    file.text().then((text) => {
-      const { title, body } = parseNotionMd(text);
-      setEditingId(null);
-      setDraft({
-        title,
-        slug: slugify(title || file.name.replace(/\.md$/, '')),
-        description: '',
-        tags: '',
-        content_md: body,
-      });
-      setShowPreview(false);
-      setStatus(`Cargado: ${file.name}`);
-    });
-  }
-
-  async function startEdit(p: AdminPost) {
-    setEditingId(p.id);
-    setDraft({
-      title: p.title,
-      slug: p.slug,
-      description: p.description ?? '',
-      tags: (p.tags ?? []).join(', '),
-      content_md: '',
-    });
-    setShowPreview(false);
-    setStatus('');
-    setContentLoading(true);
+  async function doSync() {
+    if (!link.trim()) return;
+    setSyncing(true);
+    setStatus('Sincronizando...');
     try {
       const token = await getToken();
-      const { content } = await adminApi.getContent(token!, p.id);
-      setDraft((d) => ({ ...d, content_md: content ?? '' }));
-    } catch (e) {
-      setStatus(`Error cargando contenido: ${e}`, true);
-    } finally {
-      setContentLoading(false);
-    }
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setDraft(emptyDraft);
-    setShowPreview(false);
-    setStatus('');
-  }
-
-  async function loadDriveFiles() {
-    setDriveBusy(true);
-    setStatus('');
-    try {
-      const token = await getToken();
-      const { files } = await adminApi.driveList(token!);
-      setDriveFiles(files);
-    } catch (e) {
-      setStatus(`Error: ${e}`, true);
-    } finally {
-      setDriveBusy(false);
-    }
-  }
-
-  async function importFromDrive(f: DriveFile) {
-    setImportingId(f.id);
-    setStatus('');
-    try {
-      const token = await getToken();
-      const r = await adminApi.driveImport(token!, f.id, f.name);
-      setStatus(`Importado: ${r.title}`);
+      const r = await adminApi.sync(token!, link.trim());
+      setStatus(r.created ? `Creado: ${r.title} (/${r.slug})` : `Actualizado: ${r.title} (/${r.slug})`);
+      setLink('');
       refresh();
     } catch (e) {
       setStatus(`Error: ${e}`, true);
     } finally {
-      setImportingId(null);
+      setSyncing(false);
     }
   }
 
-  async function saveDraft() {
-    setSaving(true);
-    setStatus('Guardando...');
+  async function doResync(id: string) {
+    setBusyId(id);
+    setStatus('Re-sincronizando...');
     try {
       const token = await getToken();
-      const tags = draft.tags.split(',').map((t) => t.trim()).filter(Boolean);
-
-      if (editingId) {
-        const patch: Record<string, unknown> = {
-          id: editingId,
-          title: draft.title,
-          slug: draft.slug,
-          description: draft.description,
-          tags,
-        };
-        if (draft.content_md.trim()) patch.content_md = draft.content_md;
-        await adminApi.update(token!, patch);
-        setStatus('Cambios guardados.');
-      } else {
-        await adminApi.create(token!, {
-          title: draft.title,
-          slug: draft.slug,
-          description: draft.description,
-          content_md: draft.content_md,
-          tags,
-        });
-        setStatus('Borrador guardado.');
-      }
-      setEditingId(null);
-      setDraft(emptyDraft);
-      setShowPreview(false);
+      const r = await adminApi.resync(token!, id);
+      setStatus(`Actualizado: ${r.title} (/${r.slug})`);
       refresh();
     } catch (e) {
       setStatus(`Error: ${e}`, true);
     } finally {
-      setSaving(false);
+      setBusyId(null);
     }
   }
 
-  async function publishNew() {
+  async function doPublish(id: string) {
     const n = subscribers ?? 0;
     if (!confirm(`Esto enviará un email a ${n} suscriptor${n === 1 ? '' : 'es'}. ¿Publicar de todas formas?`)) return;
-    setSaving(true);
-    setStatus('Guardando y publicando...');
-    try {
-      const token = await getToken();
-      const tags = draft.tags.split(',').map((t) => t.trim()).filter(Boolean);
-
-      let id = editingId;
-      if (editingId) {
-        const patch: Record<string, unknown> = {
-          id: editingId,
-          title: draft.title,
-          slug: draft.slug,
-          description: draft.description,
-          tags,
-        };
-        if (draft.content_md.trim()) patch.content_md = draft.content_md;
-        await adminApi.update(token!, patch);
-      } else {
-        const r = await adminApi.create(token!, {
-          title: draft.title,
-          slug: draft.slug,
-          description: draft.description,
-          content_md: draft.content_md,
-          tags,
-        });
-        id = r.id;
-      }
-      if (!id) throw new Error('no se obtuvo el id del post');
-      setStatus('Publicando y enviando newsletter...');
-      const r = await adminApi.publish(token!, id);
-      setStatus(`Publicado. Newsletter: ${r.newsletter.sent} enviados, ${r.newsletter.failed} fallos.`);
-      setEditingId(null);
-      setDraft(emptyDraft);
-      setShowPreview(false);
-      refresh();
-    } catch (e) {
-      setStatus(`Error: ${e}`, true);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function publish(id: string) {
-    const n = subscribers ?? 0;
-    if (!confirm(`Esto enviará un email a ${n} suscriptor${n === 1 ? '' : 'es'}. ¿Publicar de todas formas?`)) return;
+    setBusyId(id);
     setStatus('Publicando y enviando newsletter...');
     try {
       const token = await getToken();
@@ -307,20 +143,115 @@ export default function Admin() {
       refresh();
     } catch (e) {
       setStatus(`Error: ${e}`, true);
+    } finally {
+      setBusyId(null);
     }
   }
 
-  async function remove(id: string) {
-    if (!confirm('¿Eliminar este post?')) return;
-    const token = await getToken();
-    await adminApi.remove(token!, id);
-    refresh();
+  async function doSendNewsletter(id: string) {
+    const n = subscribers ?? 0;
+    if (!confirm(`Se reenviará el correo a los suscriptores pendientes o fallidos (de ${n} totales). ¿Continuar?`)) return;
+    setBusyId(id);
+    setStatus('Reenviando newsletter...');
+    try {
+      const token = await getToken();
+      const r = await adminApi.sendNewsletter(token!, id);
+      setStatus(`Newsletter: ${r.newsletter.sent} enviados, ${r.newsletter.failed} fallos, ${r.newsletter.skipped} ya enviados.`);
+      refresh();
+    } catch (e) {
+      setStatus(`Error: ${e}`, true);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function doRemove(id: string) {
+    if (!confirm('¿Eliminar este post del panel? Esto no borra el contenido del repo.')) return;
+    setBusyId(id);
+    try {
+      const token = await getToken();
+      await adminApi.remove(token!, id);
+      refresh();
+    } catch (e) {
+      setStatus(`Error: ${e}`, true);
+    } finally {
+      setBusyId(null);
+    }
   }
 
   const drafts = posts.filter((p) => p.status === 'draft');
-  const published = posts.filter((p) => (p.status as string) === 'published');
-  const canPublish = !!draft.title && !!draft.slug && !!draft.content_md.trim();
-  const readyToSave = !!draft.title && !!draft.slug;
+  const published = posts.filter((p) => p.status === 'published');
+
+  function PostRow({ p }: { p: AdminPost }) {
+    const firstTag = p.tags[0]?.name ?? 'sin tag';
+    const seriesLabel = p.series ? `Parte ${p.series_order} · ${p.series.title}` : null;
+    const shortSha = p.source ? p.source.commit_sha.slice(0, 7) : null;
+    const newsletterLabel = p.newsletter
+      ? `enviado ${p.newsletter.sent}${p.newsletter.failed ? ` / fallidos ${p.newsletter.failed}` : ''}`
+      : 'sin enviar';
+    const githubUrl = p.source
+      ? `https://github.com/${p.source.repo}/tree/${p.source.commit_sha}/${p.source.path}`
+      : null;
+    const busy = busyId === p.id;
+
+    return (
+      <div className="admin-row" style={{ flexWrap: 'wrap' }}>
+        <span
+          style={{
+            fontFamily: "'IBM Plex Mono',monospace",
+            fontSize: 11,
+            color: '#3b82f6',
+            background: 'rgba(59,130,246,.12)',
+            padding: '4px 10px',
+            borderRadius: 5,
+            flexShrink: 0,
+          }}
+        >
+          {firstTag}
+        </span>
+        <span style={{ fontSize: 14, flex: 1, minWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {p.title} <span style={{ color: '#5b6a8f' }}>/{p.slug}</span>
+          {seriesLabel && (
+            <span style={{ color: '#5b6a8f', marginLeft: 8, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11 }}>
+              {seriesLabel}
+            </span>
+          )}
+        </span>
+        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f' }}>
+          {shortSha ? `${shortSha} · ${formatRelative(p.source!.synced_at)}` : 'sin fuente'}
+        </span>
+        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f' }}>
+          {newsletterLabel}
+        </span>
+        {p.status === 'published' && (
+          <a href={`/post/${p.slug}`} className="admin-action" style={{ color: '#8fd0ff' }}>
+            ver
+          </a>
+        )}
+        {githubUrl && (
+          <a href={githubUrl} target="_blank" rel="noreferrer" className="admin-action">
+            código
+          </a>
+        )}
+        <button className="admin-action" onClick={() => doResync(p.id)} disabled={busy}>
+          {busy ? '...' : 're-sincronizar'}
+        </button>
+        {p.status === 'draft' && (
+          <button className="admin-action" onClick={() => doPublish(p.id)} disabled={busy} style={{ color: '#8fd0ff' }}>
+            publicar + email
+          </button>
+        )}
+        {p.status === 'published' && (
+          <button className="admin-action" onClick={() => doSendNewsletter(p.id)} disabled={busy} style={{ color: '#8fd0ff' }}>
+            reenviar newsletter
+          </button>
+        )}
+        <button className="admin-action danger" onClick={() => doRemove(p.id)} disabled={busy}>
+          eliminar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '56px 32px 120px' }}>
@@ -344,20 +275,15 @@ export default function Admin() {
         </span>
       </div>
 
-      {/* 2. dropzone */}
+      {/* 2. link + sincronizar */}
       <div
-        className={`dropzone${dragOver ? ' drag-active' : ''}`}
-        onClick={() => fileInputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          const f = e.dataTransfer.files[0];
-          if (f) onFile(f);
+        style={{
+          border: '2px dashed #232d47',
+          background: '#0e1426',
+          borderRadius: 14,
+          padding: '36px 24px',
+          textAlign: 'center',
+          marginBottom: 28,
         }}
       >
         <div style={{ width: 44, height: 44, margin: '0 auto 16px', border: '2px solid #f0954c', borderRadius: 8, position: 'relative' }}>
@@ -376,141 +302,27 @@ export default function Admin() {
             .md
           </div>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Arrastra tu archivo .md aquí</div>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Pega el link del post</div>
         <div style={{ color: '#5b6a8f', fontSize: 13, marginBottom: 18 }}>
-          o haz clic para seleccionar desde tu equipo
+          link al <code>index.md</code> o a la carpeta del post en GitHub
         </div>
-        <div className="dropzone-chip">Seleccionar archivo</div>
-
-        {draft.content_md && (
-          <div
-            style={{
-              marginTop: 22,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 10,
-              background: 'rgba(59,130,246,.12)',
-              border: '1px solid #3b82f6',
-              padding: '9px 16px',
-              borderRadius: 8,
-            }}
-          >
-            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, color: '#8fd0ff' }}>
-              {draft.slug || draft.title || 'archivo cargado'}
-            </span>
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                cancelEdit();
-              }}
-              style={{ cursor: 'pointer', color: '#5b6a8f', fontSize: 14 }}
-            >
-              ✕
-            </span>
-          </div>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".md,.markdown,text/markdown"
-          style={{ display: 'none' }}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-        />
-      </div>
-
-      {/* 3. form grid: titulo | etiquetas, descripcion, contenido */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        <div>
-          <label>Título</label>
+        <div style={{ display: 'flex', gap: 10, maxWidth: 520, margin: '0 auto' }}>
           <input
-            value={draft.title}
-            placeholder="ej. Diseñando un lakehouse desde cero"
-            onChange={(e) => setDraft({ ...draft, title: e.target.value, slug: slugify(e.target.value) })}
+            value={link}
+            placeholder="https://github.com/DidierParody/Dipper/tree/main/content/posts/mi-post"
+            onChange={(e) => setLink(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && doSync()}
+            style={{ flex: 1 }}
           />
-        </div>
-        <div>
-          <label>Etiquetas</label>
-          <input
-            value={draft.tags}
-            placeholder="ej. Data Engineering, Cloud"
-            onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
-          />
-        </div>
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <label>Descripción (para cards y el correo)</label>
-        <input
-          value={draft.description}
-          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-        />
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <label style={{ margin: 0 }}>Contenido ({draft.content_md.length} caracteres)</label>
-          <span
-            onClick={() => setShowPreview((v) => !v)}
-            style={{
-              cursor: 'pointer',
-              color: '#5b6a8f',
-              fontFamily: "'IBM Plex Mono',monospace",
-              fontSize: 12.5,
-              marginBottom: 6,
-            }}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={doSync}
+            disabled={!link.trim() || syncing}
           >
-            vista previa
-          </span>
-        </div>
-        {contentLoading && (
-          <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 13 }}>Cargando contenido...</p>
-        )}
-        {!showPreview && !contentLoading && (
-          <textarea rows={8} value={draft.content_md} onChange={(e) => setDraft({ ...draft, content_md: e.target.value })} />
-        )}
-        {showPreview && !contentLoading && (
-          <div className="markdown-body" style={{ marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-            {draft.content_md.trim() ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {draft.content_md}
-              </ReactMarkdown>
-            ) : (
-              <p style={{ color: '#5b6a8f' }}>Nada que previsualizar todavía.</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 4. botones + mensaje */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={saveDraft}
-          disabled={!readyToSave || saving}
-        >
-          Guardar borrador
-        </button>
-        <div
-          onClick={() => canPublish && !saving && publishNew()}
-          style={{
-            cursor: canPublish && !saving ? 'pointer' : 'not-allowed',
-            display: 'inline-block',
-            background: canPublish ? '#3b82f6' : '#1c2438',
-            color: canPublish ? '#06101f' : '#5b6a8f',
-            fontWeight: 600,
-            fontSize: 14,
-            padding: '12px 26px',
-            borderRadius: 8,
-          }}
-        >
-          Publicar post
-        </div>
-        {editingId && (
-          <button type="button" className="admin-chip-btn" onClick={cancelEdit}>
-            cancelar
+            {syncing ? 'sincronizando…' : 'sincronizar'}
           </button>
-        )}
+        </div>
       </div>
 
       {msg && (
@@ -519,122 +331,27 @@ export default function Admin() {
         </p>
       )}
 
-      {/* 5. importar desde drive */}
-      <div style={{ marginTop: 44 }}>
-        <SectionHeader>importar desde drive</SectionHeader>
-        {driveConfigured === false && (
-          <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
-            <p style={{ margin: '0 0 8px', color: '#8b96b2', fontSize: 13.5 }}>
-              La importación desde Google Drive todavía no está configurada. Para activarla:
-            </p>
-            <ol style={{ color: '#8b96b2', margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
-              <li>Crear una service account de Google con acceso a la API de Drive.</li>
-              <li>Compartir la carpeta de Drive con el email de esa service account.</li>
-              <li>Pasarle el JSON de la service account a Claude para configurar los secrets.</li>
-            </ol>
-          </div>
-        )}
-        {driveConfigured === true && (
-          <div style={{ background: '#0e1426', border: '1px solid #1c2438', borderRadius: 10, padding: 18, marginBottom: 28 }}>
-            <button className="admin-chip-btn" onClick={loadDriveFiles} disabled={driveBusy}>
-              {driveBusy ? 'Listando…' : 'Listar archivos de Drive'}
-            </button>
-            {driveFiles && driveFiles.length === 0 && (
-              <p style={{ color: '#5b6a8f', marginTop: 12, fontSize: 13.5 }}>No hay archivos .md en la carpeta.</p>
-            )}
-            {driveFiles && driveFiles.length > 0 && (
-              <div style={{ marginTop: 14, border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden' }}>
-                {driveFiles.map((f) => (
-                  <div key={f.id} className="admin-row">
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: 14 }}>
-                      {f.name}{' '}
-                      <span style={{ color: '#5b6a8f', fontSize: 11.5, fontFamily: "'IBM Plex Mono',monospace" }}>
-                        {new Date(f.modifiedTime).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </span>
-                    </span>
-                    <button
-                      className="admin-chip-btn"
-                      onClick={() => importFromDrive(f)}
-                      disabled={importingId === f.id}
-                    >
-                      {importingId === f.id ? 'importando…' : 'importar'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 6. borradores */}
+      {/* borradores */}
       <div style={{ marginTop: 44 }}>
         <SectionHeader>borradores ({drafts.length})</SectionHeader>
         {drafts.length === 0 && <p style={{ color: '#5b6a8f', fontSize: 13.5 }}>No hay borradores.</p>}
         {drafts.length > 0 && (
           <div style={{ border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden', marginBottom: 32 }}>
             {drafts.map((p) => (
-              <div key={p.id} className="admin-row">
-                <span
-                  style={{
-                    fontFamily: "'IBM Plex Mono',monospace",
-                    fontSize: 11,
-                    color: '#3b82f6',
-                    background: 'rgba(59,130,246,.12)',
-                    padding: '4px 10px',
-                    borderRadius: 5,
-                    flexShrink: 0,
-                  }}
-                >
-                  {p.tags[0] ?? 'sin tag'}
-                </span>
-                <span style={{ fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.title} <span style={{ color: '#5b6a8f' }}>/{p.slug}</span>
-                </span>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: '#5b6a8f' }}>
-                  {p.published_at ? new Date(p.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
-                </span>
-                <button className="admin-action" onClick={() => publish(p.id)} style={{ color: '#8fd0ff' }}>
-                  publicar
-                </button>
-                <button className="admin-action" onClick={() => startEdit(p)}>editar</button>
-                <button className="admin-action danger" onClick={() => remove(p.id)}>borrar</button>
-              </div>
+              <PostRow key={p.id} p={p} />
             ))}
           </div>
         )}
       </div>
 
-      {/* 7. posts publicados */}
+      {/* posts publicados */}
       <div>
         <SectionHeader>posts publicados ({published.length})</SectionHeader>
         {published.length === 0 && <p style={{ color: '#5b6a8f', fontSize: 13.5 }}>No hay posts publicados.</p>}
         {published.length > 0 && (
           <div style={{ border: '1px solid #1c2438', borderRadius: 10, overflow: 'hidden' }}>
             {published.map((p) => (
-              <div key={p.id} className="admin-row">
-                <span
-                  style={{
-                    fontFamily: "'IBM Plex Mono',monospace",
-                    fontSize: 11,
-                    color: '#3b82f6',
-                    background: 'rgba(59,130,246,.12)',
-                    padding: '4px 10px',
-                    borderRadius: 5,
-                    flexShrink: 0,
-                  }}
-                >
-                  {p.tags[0] ?? 'sin tag'}
-                </span>
-                <span style={{ fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.title}
-                </span>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: '#5b6a8f' }}>
-                  {p.published_at ? new Date(p.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
-                </span>
-                <button className="admin-action" onClick={() => startEdit(p)}>editar</button>
-                <button className="admin-action danger" onClick={() => remove(p.id)}>borrar</button>
-              </div>
+              <PostRow key={p.id} p={p} />
             ))}
           </div>
         )}

@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { fetchPostBySlug, fetchPostContent, type Post as PostType } from '../lib/supabase';
+import { fetchPostBySlug, fetchSeriesPosts, type Post as PostType, type PostSource } from '../lib/supabase';
+import { contentBaseUrl, fetchPostMarkdown, resolveAssetUrl } from '../lib/content';
 import SubscribeButton from '../components/SubscribeButton';
+
+interface SeriesNav {
+  title: string;
+  index: number;
+  total: number;
+  prevSlug: string | null;
+  nextSlug: string | null;
+}
 
 export default function Post() {
   const { slug } = useParams();
@@ -13,12 +22,13 @@ export default function Post() {
   const [content, setContent] = useState<string | null>(null);
   const [contentError, setContentError] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
+  const [seriesNav, setSeriesNav] = useState<SeriesNav | null>(null);
 
-  const loadContent = useCallback((s: string) => {
+  const loadContent = useCallback((source: PostSource) => {
     setContentLoading(true);
     setContentError(false);
     setContent(null);
-    fetchPostContent(s)
+    fetchPostMarkdown(source)
       .then((md) => setContent(md))
       .catch(() => setContentError(true))
       .finally(() => setContentLoading(false));
@@ -26,9 +36,43 @@ export default function Post() {
 
   useEffect(() => {
     setPost('loading');
+    setContent(null);
+    setContentError(false);
+    setSeriesNav(null);
     if (!slug) return;
-    fetchPostBySlug(slug).then((p) => setPost(p)).catch(() => setPost(null));
-    loadContent(slug);
+
+    let cancelled = false;
+
+    fetchPostBySlug(slug)
+      .then((p) => {
+        if (cancelled) return;
+        setPost(p);
+        if (!p) return;
+
+        loadContent(p.source);
+
+        if (p.series) {
+          fetchSeriesPosts(p.series.slug)
+            .then((res) => {
+              if (cancelled || !res) return;
+              const idx = res.posts.findIndex((sp) => sp.slug === p.slug);
+              if (idx === -1) return;
+              setSeriesNav({
+                title: res.series.title,
+                index: idx + 1,
+                total: res.posts.length,
+                prevSlug: idx > 0 ? res.posts[idx - 1].slug : null,
+                nextSlug: idx < res.posts.length - 1 ? res.posts[idx + 1].slug : null,
+              });
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => !cancelled && setPost(null));
+
+    return () => {
+      cancelled = true;
+    };
   }, [slug, loadContent]);
 
   if (post === 'loading') {
@@ -67,6 +111,8 @@ export default function Post() {
     ? new Date(post.published_at).toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
   const minutes = post.reading_minutes;
+  const base = contentBaseUrl(post.source);
+  const coverUrl = post.cover_path ? resolveAssetUrl(base, post.cover_path) : null;
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
@@ -98,7 +144,7 @@ export default function Post() {
             borderRadius: 5,
           }}
         >
-          {post.tags[0]}
+          {post.tags[0].name}
         </span>
       )}
       <h1
@@ -143,11 +189,48 @@ export default function Post() {
         </div>
       </div>
 
-      {post.cover_url && (
+      {seriesNav && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            background: '#0e1426',
+            border: '1px solid #1c2438',
+            borderRadius: 8,
+            padding: '12px 16px',
+            marginBottom: 24,
+            fontFamily: "'IBM Plex Mono',monospace",
+            fontSize: 12,
+            color: '#8b96b2',
+          }}
+        >
+          <Link to={`/series/${post.series?.slug}`} style={{ color: '#3b82f6' }}>
+            Parte {seriesNav.index} de {seriesNav.total} · {seriesNav.title}
+          </Link>
+          <div style={{ display: 'flex', gap: 14 }}>
+            {seriesNav.prevSlug && (
+              <Link to={`/post/${seriesNav.prevSlug}`} style={{ color: '#5b6a8f' }}>
+                ← anterior
+              </Link>
+            )}
+            {seriesNav.nextSlug && (
+              <Link to={`/post/${seriesNav.nextSlug}`} style={{ color: '#5b6a8f' }}>
+                siguiente →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {coverUrl && (
         <img
-          src={post.cover_url}
+          src={coverUrl}
           alt=""
-          style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 16 }}
+          loading="lazy"
+          style={{ width: '100%', maxWidth: '100%', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 16 }}
         />
       )}
 
@@ -160,7 +243,7 @@ export default function Post() {
             No se pudo cargar el contenido.{' '}
             <span
               className="back-link"
-              onClick={() => slug && loadContent(slug)}
+              onClick={() => loadContent(post.source)}
               style={{ cursor: 'pointer', color: '#3b82f6' }}
             >
               reintentar
@@ -168,7 +251,17 @@ export default function Post() {
           </p>
         )}
         {!contentLoading && !contentError && content !== null && (
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+            urlTransform={(url) => defaultUrlTransform(resolveAssetUrl(base, url))}
+            components={{
+              img: (props) => (
+                // eslint-disable-next-line jsx-a11y/alt-text
+                <img {...props} loading="lazy" style={{ maxWidth: '100%' }} />
+              ),
+            }}
+          >
             {content}
           </ReactMarkdown>
         )}
@@ -177,7 +270,7 @@ export default function Post() {
       <div style={{ display: 'flex', gap: 8, marginTop: 40, paddingTop: 24, borderTop: '1px solid #1c2438' }}>
         {post.tags.map((t) => (
           <span
-            key={t}
+            key={t.slug}
             style={{
               fontFamily: "'IBM Plex Mono',monospace",
               fontSize: 11,
@@ -187,7 +280,7 @@ export default function Post() {
               borderRadius: 5,
             }}
           >
-            {t}
+            {t.name}
           </span>
         ))}
         <span

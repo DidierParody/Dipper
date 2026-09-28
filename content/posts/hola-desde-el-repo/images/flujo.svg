@@ -1,0 +1,58 @@
+<svg viewBox="0 0 800 260" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+  <rect width="800" height="260" fill="#0A0E17"/>
+
+  <!-- step 1: folder -->
+  <g transform="translate(40,90)">
+    <rect x="0" y="16" width="70" height="46" fill="#E8A25E"/>
+    <rect x="0" y="8" width="32" height="8" fill="#E8A25E"/>
+    <rect x="5" y="24" width="60" height="30" fill="#0A0E17"/>
+    <text x="35" y="95" text-anchor="middle" fill="#F2F2F0" font-family="'IBM Plex Mono', monospace" font-size="13">index.md</text>
+  </g>
+
+  <g fill="#3b82f6">
+    <rect x="130" y="105" width="40" height="8"/>
+    <rect x="162" y="97" width="8" height="8"/>
+    <rect x="162" y="121" width="8" height="8"/>
+  </g>
+
+  <!-- step 2: github push -->
+  <g transform="translate(190,80)">
+    <rect x="0" y="0" width="90" height="66" fill="#0e1426" stroke="#232d47" stroke-width="4"/>
+    <circle cx="45" cy="24" r="14" fill="none" stroke="#F2F2F0" stroke-width="5"/>
+    <rect x="30" y="40" width="30" height="16" fill="#F2F2F0"/>
+    <text x="45" y="95" text-anchor="middle" fill="#F2F2F0" font-family="'IBM Plex Mono', monospace" font-size="13">git push</text>
+  </g>
+
+  <g fill="#3b82f6">
+    <rect x="300" y="105" width="40" height="8"/>
+    <rect x="332" y="97" width="8" height="8"/>
+    <rect x="332" y="121" width="8" height="8"/>
+  </g>
+
+  <!-- step 3: admin link input -->
+  <g transform="translate(360,85)">
+    <rect x="0" y="0" width="140" height="34" fill="#111830" stroke="#232d47" stroke-width="3"/>
+    <text x="8" y="22" fill="#5b6a8f" font-family="'IBM Plex Mono', monospace" font-size="12">pegar link…</text>
+    <rect x="0" y="44" width="90" height="24" fill="#E8A25E"/>
+    <text x="45" y="61" text-anchor="middle" fill="#0A0E17" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="bold">SINCRONIZAR</text>
+  </g>
+
+  <g fill="#3b82f6">
+    <rect x="530" y="105" width="40" height="8"/>
+    <rect x="562" y="97" width="8" height="8"/>
+    <rect x="562" y="121" width="8" height="8"/>
+  </g>
+
+  <!-- step 4: published badge -->
+  <g transform="translate(600,80)">
+    <rect x="0" y="0" width="120" height="70" fill="#0e1426" stroke="#3b82f6" stroke-width="4"/>
+    <rect x="14" y="14" width="92" height="20" fill="rgba(59,130,246,.2)"/>
+    <text x="60" y="29" text-anchor="middle" fill="#8fd0ff" font-family="'IBM Plex Mono', monospace" font-size="11">PUBLISHED</text>
+    <rect x="14" y="42" width="60" height="14" fill="#1c2438"/>
+    <text x="60" y="90" text-anchor="middle" fill="#F2F2F0" font-family="'IBM Plex Mono', monospace" font-size="13">+ email</text>
+  </g>
+
+  <text x="400" y="230" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" fill="#5b6a8f" letter-spacing="1">
+    carpeta → push → sincronizar → publicar
+  </text>
+</svg>

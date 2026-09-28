@@ -21,20 +21,33 @@ export const subscriptionApi = {
     call('subscribe', { action: 'unsubscribe_token', token: unsubToken }),
 };
 
+export interface AdminPost {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  status: 'draft' | 'published';
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  reading_minutes: number;
+  series: { slug: string; title: string } | null;
+  series_order: number | null;
+  tags: { slug: string; name: string }[];
+  source: { repo: string; path: string; commit_sha: string; synced_at: string } | null;
+  newsletter: { sent_at: string; sent: number; failed: number } | null;
+}
+
 export const adminApi = {
-  list: (token: string) => call('admin-posts', { action: 'list' }, token),
-  create: (token: string, post: object) => call('admin-posts', { action: 'create', post }, token),
-  update: (token: string, post: object) => call('admin-posts', { action: 'update', post }, token),
-  publish: (token: string, id: string) => call('admin-posts', { action: 'publish', id }, token),
-  sendNewsletter: (token: string, id: string) =>
+  list: (token: string): Promise<{ posts: AdminPost[] }> => call('admin-posts', { action: 'list' }, token),
+  sync: (token: string, url: string): Promise<{ id: string; slug: string; title: string; created: boolean }> =>
+    call('admin-posts', { action: 'sync', url }, token),
+  resync: (token: string, id: string): Promise<{ id: string; slug: string; title: string; created: false }> =>
+    call('admin-posts', { action: 'resync', id }, token),
+  publish: (token: string, id: string): Promise<{ ok: boolean; newsletter: { sent: number; failed: number; skipped: number } }> =>
+    call('admin-posts', { action: 'publish', id }, token),
+  sendNewsletter: (token: string, id: string): Promise<{ ok: boolean; newsletter: { sent: number; failed: number; skipped: number } }> =>
     call('admin-posts', { action: 'send_newsletter', id }, token),
-  remove: (token: string, id: string) => call('admin-posts', { action: 'delete', id }, token),
-  uploadAsset: (token: string, filename: string, base64: string, content_type: string) =>
-    call('admin-posts', { action: 'upload_asset', filename, base64, content_type }, token),
-  driveStatus: (token: string) => call('admin-posts', { action: 'drive_status' }, token),
-  driveList: (token: string) => call('admin-posts', { action: 'drive_list' }, token),
-  driveImport: (token: string, file_id: string, name: string) =>
-    call('admin-posts', { action: 'drive_import', file_id, name }, token),
-  stats: (token: string) => call('admin-posts', { action: 'stats' }, token),
-  getContent: (token: string, id: string) => call('admin-posts', { action: 'get_content', id }, token),
+  remove: (token: string, id: string): Promise<{ ok: boolean }> => call('admin-posts', { action: 'delete', id }, token),
+  stats: (token: string): Promise<{ subscribers: number }> => call('admin-posts', { action: 'stats' }, token),
 };

@@ -21,7 +21,7 @@ export default function Creator() {
   const tags = useMemo(() => {
     if (!posts) return [];
     const set = new Set<string>();
-    posts.forEach((p) => p.tags.forEach((t) => set.add(t)));
+    posts.forEach((p) => p.tags.forEach((t) => set.add(t.slug)));
     return Array.from(set);
   }, [posts]);
 

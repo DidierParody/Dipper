@@ -19,27 +19,27 @@ export default function Home({ search }: HomeProps) {
 
   const allTags = useMemo(() => {
     if (!posts) return [];
-    const set = new Set<string>();
-    posts.forEach((p) => p.tags.forEach((t) => set.add(t)));
-    return Array.from(set).sort();
+    const map = new Map<string, string>();
+    posts.forEach((p) => p.tags.forEach((t) => map.set(t.slug, t.name)));
+    return Array.from(map, ([slug, name]) => ({ slug, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [posts]);
 
   const filteredPosts = useMemo(() => {
     if (!posts) return posts;
     const q = search.trim().toLowerCase();
     return posts
-      .filter((p) => !tag || p.tags.includes(tag))
+      .filter((p) => !tag || p.tags.some((t) => t.slug === tag))
       .filter(
         (p) =>
           !q ||
           p.title.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q)) ||
-          (p.description ?? '').toLowerCase().includes(q)
+          p.tags.some((t) => t.name.toLowerCase().includes(q)) ||
+          (p.summary ?? '').toLowerCase().includes(q)
       );
   }, [posts, tag, search]);
 
-  function selectTag(t: string | null) {
-    navigate(t ? `/tag/${t}` : '/');
+  function selectTag(slug: string | null) {
+    navigate(slug ? `/tag/${slug}` : '/');
   }
 
   const noResults = posts !== null && filteredPosts !== null && filteredPosts.length === 0 && (search.trim() || tag);
@@ -75,8 +75,8 @@ export default function Home({ search }: HomeProps) {
           Todos
         </div>
         {allTags.map((t) => (
-          <div key={t} className={`tag-pill${tag === t ? ' active' : ''}`} onClick={() => selectTag(t)}>
-            {t}
+          <div key={t.slug} className={`tag-pill${tag === t.slug ? ' active' : ''}`} onClick={() => selectTag(t.slug)}>
+            {t.name}
           </div>
         ))}
       </div>
@@ -105,7 +105,7 @@ export default function Home({ search }: HomeProps) {
                     borderRadius: 5,
                   }}
                 >
-                  {post.tags[0] ?? ''}
+                  {post.tags[0]?.name ?? ''}
                 </span>
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5b6a8f' }}>
                   {date}
@@ -113,7 +113,7 @@ export default function Home({ search }: HomeProps) {
               </div>
               <h3 style={{ fontSize: 19, fontWeight: 600, margin: 0, lineHeight: 1.35 }}>{post.title}</h3>
               <p style={{ color: '#8b96b2', fontSize: 13.5, lineHeight: 1.6, margin: 0, flex: 1 }}>
-                {post.description}
+                {post.summary}
               </p>
               <div
                 style={{
