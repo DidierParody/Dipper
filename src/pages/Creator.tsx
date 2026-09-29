@@ -60,7 +60,7 @@ export default function Creator() {
             Didier Parody
           </h1>
           <p style={{ color: '#8b96b2', fontSize: 14.5, margin: 0 }}>
-            Cloud &amp; Data Engineer · construyendo pipelines, plataformas y notas técnicas
+            From data to systems. From systems to impact
           </p>
         </div>
       </div>
