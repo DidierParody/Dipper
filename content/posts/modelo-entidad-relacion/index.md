@@ -311,3 +311,12 @@ La solución en este caso es una tabla, por eso la relación en el MER tiene atr
     A final de cuentas, aunque existen reglas la realidad es que todo se vuelve análisis y parte de ese análisis es jugar con las existentes en base a tu contexto.
     
     ---
+
+## Referencias
+
+1. Chen, P. P.-S. (1976). The Entity-Relationship Model—Toward a Unified View of Data. *ACM Transactions on Database Systems*, 1(1), 9–36. [https://doi.org/10.1145/320434.320440](https://doi.org/10.1145/320434.320440) ([versión libre del autor](http://bit.csc.lsu.edu/~chen/pdf/erd-5-pages.pdf))
+2. Elmasri, R., & Navathe, S. B. (2016). *Fundamentals of Database Systems* (7.ª ed.). Pearson. Capítulos 3 (modelado con el modelo ER) y 9 (mapeo de ER a relacional). [Pearson](https://www.pearson.com/en-us/subject-catalog/p/fundamentals-of-database-systems/P200000003546)
+3. Silberschatz, A., Korth, H. F., & Sudarshan, S. (2019). *Database System Concepts* (7.ª ed.). McGraw-Hill. Capítulo 6: Database Design Using the E-R Model. [db-book.com](https://db-book.com/) · [diapositivas del capítulo 6](https://db-book.com/slides-dir/PDF-dir/ch6.pdf)
+4. Codd, E. F. (1970). A Relational Model of Data for Large Shared Data Banks. *Communications of the ACM*, 13(6), 377–387. [https://doi.org/10.1145/362384.362685](https://doi.org/10.1145/362384.362685)
+5. PostgreSQL Global Development Group. *Constraints* (claves primarias y foráneas). Documentación de PostgreSQL. [postgresql.org](https://www.postgresql.org/docs/current/ddl-constraints.html)
+6. Amazon Web Services. *¿Qué es el almacenamiento de objetos?* [aws.amazon.com](https://aws.amazon.com/what-is/object-storage/)
