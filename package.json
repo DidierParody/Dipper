@@ -13,6 +13,7 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.61.8",
     "@giscus/react": "^3.1.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.110.0",
     "highlight.js": "^11.11.1",
     "katex": "^0.18.9",
@@ -23,7 +24,8 @@
     "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
-    "remark-math": "^6.0.0"
+    "remark-math": "^6.0.0",
+    "satori": "^0.33.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
