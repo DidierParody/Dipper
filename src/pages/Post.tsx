@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
+import 'katex/dist/katex.min.css';
 import { fetchPostBySlug, fetchSeriesPosts, type Post as PostType, type PostSource } from '../lib/supabase';
 import { contentBaseUrl, fetchPostMarkdown, resolveAssetUrl } from '../lib/content';
+import { remarkPlugins, rehypePlugins } from '../lib/markdown';
 import SubscribeButton from '../components/SubscribeButton';
 
 interface SeriesNav {
@@ -252,8 +252,8 @@ export default function Post() {
         )}
         {!contentLoading && !contentError && content !== null && (
           <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
             urlTransform={(url) => defaultUrlTransform(resolveAssetUrl(base, url))}
             components={{
               img: (props) => (
