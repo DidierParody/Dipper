@@ -29,7 +29,7 @@ export default function Creator() {
   const tagsCount = tags.length;
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: '64px 32px 120px' }}>
+    <div className="page" style={{ maxWidth: 820, margin: '0 auto', padding: '64px 32px 120px' }}>
       <div style={{ display: 'flex', gap: 28, alignItems: 'center', marginBottom: 40, flexWrap: 'wrap' }}>
         <img
           src="https://github.com/DidierParody.png"

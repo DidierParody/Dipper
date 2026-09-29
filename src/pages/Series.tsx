@@ -17,7 +17,7 @@ export default function Series() {
 
   if (data === 'loading') {
     return (
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
+      <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
         <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace" }}>Cargando...</p>
       </div>
     );
@@ -25,7 +25,7 @@ export default function Series() {
 
   if (!data) {
     return (
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px', textAlign: 'center' }}>
+      <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px', textAlign: 'center' }}>
         <h1 style={{ fontSize: 36 }}>404</h1>
         <p style={{ color: '#8b96b2', fontFamily: "'IBM Plex Mono',monospace" }}>Esta serie no existe.</p>
         <span
@@ -51,7 +51,7 @@ export default function Series() {
   const { series, posts } = data;
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
+    <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
       <div
         className="back-link"
         onClick={() => navigate('/')}

@@ -78,14 +78,14 @@ export default function Post() {
 
   if (post === 'loading') {
     return (
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
+      <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
         <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace" }}>Cargando...</p>
       </div>
     );
   }
   if (!post) {
     return (
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px', textAlign: 'center' }}>
+      <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px', textAlign: 'center' }}>
         <h1 style={{ fontSize: 36 }}>404</h1>
         <p style={{ color: '#8b96b2', fontFamily: "'IBM Plex Mono',monospace" }}>Este post no existe.</p>
         <span
@@ -116,7 +116,7 @@ export default function Post() {
   const coverUrl = post.cover_path ? resolveAssetUrl(base, post.cover_path) : null;
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
+    <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
       <div
         className="back-link"
         onClick={() => navigate('/')}

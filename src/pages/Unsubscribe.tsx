@@ -16,7 +16,7 @@ export default function Unsubscribe() {
   }, [params]);
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
+    <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
       {state === 'working' && (
         <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 14 }}>
           Procesando...

@@ -26,6 +26,7 @@ export default function Header({ search, onSearch }: HeaderProps) {
 
   return (
     <div
+      className="site-header"
       style={{
         position: 'sticky',
         top: 0,
@@ -84,7 +85,7 @@ export default function Header({ search, onSearch }: HeaderProps) {
         />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginLeft: 'auto', flexShrink: 0 }}>
+      <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 18, marginLeft: 'auto', flexShrink: 0 }}>
         <span
           className="nav-link"
           onClick={() => navigate('/')}

@@ -45,7 +45,7 @@ export default function Home({ search }: HomeProps) {
   const noResults = posts !== null && filteredPosts !== null && filteredPosts.length === 0 && (search.trim() || tag);
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px 100px' }}>
+    <div className="page" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px 100px' }}>
       <div style={{ marginBottom: 44, animation: 'fadeUp .5s ease both' }}>
         <div
           style={{
@@ -86,7 +86,7 @@ export default function Home({ search }: HomeProps) {
         <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace" }}>Cargando...</p>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%),1fr))', gap: 20 }}>
         {filteredPosts?.map((post) => {
           const date = post.published_at
             ? new Date(post.published_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })

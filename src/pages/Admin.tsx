@@ -91,7 +91,7 @@ export default function Admin() {
   if (!isLoaded) return null;
   if (!isAdmin || denied) {
     return (
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
+      <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#5b6a8f', fontFamily: "'IBM Plex Mono',monospace", fontSize: 14 }}>
           Zona restringida.
         </p>
@@ -254,7 +254,7 @@ export default function Admin() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '56px 32px 120px' }}>
+    <div className="page" style={{ maxWidth: 900, margin: '0 auto', padding: '56px 32px 120px' }}>
       {/* 1. header */}
       <div
         style={{
