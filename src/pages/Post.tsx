@@ -6,6 +6,7 @@ import { fetchPostBySlug, fetchSeriesPosts, type Post as PostType, type PostSour
 import { contentBaseUrl, fetchPostMarkdown, resolveAssetUrl } from '../lib/content';
 import { remarkPlugins, rehypePlugins } from '../lib/markdown';
 import SubscribeButton from '../components/SubscribeButton';
+import Comments from '../components/Comments';
 
 interface SeriesNav {
   title: string;
@@ -312,6 +313,8 @@ export default function Post() {
         </p>
         <SubscribeButton />
       </div>
+
+      <Comments slug={post.slug} />
     </div>
   );
 }
