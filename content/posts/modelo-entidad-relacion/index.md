@@ -8,7 +8,7 @@ series_order: 2
 
 ## **MER:**
 
-Aquí obtenemos tres cosas:
+Aquí obtenemos cuatro cosas:
 
 1. Las entidades.
 2. Atributos.
