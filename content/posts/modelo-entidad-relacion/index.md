@@ -312,6 +312,10 @@ La solución en este caso es una tabla, por eso la relación en el MER tiene atr
     
     ---
 
+## Antes de irte
+
+Leer hasta aquí demuestra que te ha interesado o que tienes curiosidad por mi contenido, algo que de verdad agradezco. No pierdas el hilo: suscríbete para mantenerte al día en esta aventura. Nada de *bullshit*, solo información relevante. Además, un comentario con buen feedback nunca está de más. 🚀
+
 ## Referencias
 
 1. Chen, P. P.-S. (1976). The Entity-Relationship Model—Toward a Unified View of Data. *ACM Transactions on Database Systems*, 1(1), 9–36. [https://doi.org/10.1145/320434.320440](https://doi.org/10.1145/320434.320440) ([versión libre del autor](http://bit.csc.lsu.edu/~chen/pdf/erd-5-pages.pdf))
