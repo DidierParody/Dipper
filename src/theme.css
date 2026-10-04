@@ -353,3 +353,8 @@ label { color: var(--muted-2); font-size: 11.5px; display: block; margin: 0 0 6p
     overflow-x: auto;
   }
 }
+
+/* celulares estrechos: solo el cuadrado del logo, para que logo y menú quepan en una fila */
+@media (max-width: 440px) {
+  .site-header .nav-brand-text { display: none; }
+}

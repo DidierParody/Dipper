@@ -30,7 +30,7 @@ export default function Series() {
         <p style={{ color: '#8b96b2', fontFamily: "'IBM Plex Mono',monospace" }}>Esta serie no existe.</p>
         <span
           className="back-link"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/series')}
           style={{
             cursor: 'pointer',
             display: 'inline-flex',
@@ -42,7 +42,7 @@ export default function Series() {
             marginTop: 12,
           }}
         >
-          ← volver a posts
+          ← todas las series
         </span>
       </div>
     );
@@ -54,7 +54,7 @@ export default function Series() {
     <div className="page" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 32px 120px' }}>
       <div
         className="back-link"
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/series')}
         style={{
           cursor: 'pointer',
           display: 'inline-flex',
@@ -66,7 +66,7 @@ export default function Series() {
           marginBottom: 28,
         }}
       >
-        ← volver a posts
+        ← todas las series
       </div>
 
       <div

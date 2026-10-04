@@ -4,12 +4,13 @@ import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import type { ReactNode } from 'react';
 import { DEFAULT_DESCRIPTION, fetchPostMeta, type PostMeta } from './_lib/meta.js';
+import { AVATAR_DATA_URL } from './_lib/avatar.js';
 
 type Style = Record<string, string | number>;
 type Child = Node | string | null | false;
 interface Node {
   type: string;
-  props: { style?: Style; children?: Child | Child[] };
+  props: { style?: Style; children?: Child | Child[]; src?: string; width?: number; height?: number };
 }
 
 // Satori acepta elementos con forma de React; así se evita compilar JSX en la función.
@@ -17,6 +18,20 @@ const h = (style: Style, ...children: Child[]): Node => ({
   type: 'div',
   props: { style: { display: 'flex', ...style }, children: children.filter((c) => c !== null && c !== false) },
 });
+
+// Avatar de marca en círculo (public/brand, generado por scripts/brand-icons.mjs).
+const avatar = (size: number): Node => ({
+  type: 'img',
+  props: { src: AVATAR_DATA_URL, width: size, height: size, style: { width: size, height: size, borderRadius: size / 2 } },
+});
+
+// Textos visibles de la tarjeta, para pedir a Google Fonts solo esos glifos.
+function collectText(node: Child | Child[] | undefined): string {
+  if (!node) return '';
+  if (typeof node === 'string') return node;
+  if (Array.isArray(node)) return node.map(collectText).join('');
+  return collectText(node.props.children);
+}
 
 const C = {
   bg: '#0a0e18',
@@ -73,17 +88,21 @@ function card(post: PostMeta | null): Node {
   );
   const footer = post
     ? h(
-        { justifyContent: 'space-between', alignItems: 'center', width: '100%' },
+        { justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 32 },
         h(
           { gap: 12 },
-          ...post.tags.slice(0, 3).map((t) =>
+          ...post.tags.slice(0, 2).map((t) =>
             h(
               { fontFamily: 'Plex', fontSize: 22, color: C.blue, background: 'rgba(59,130,246,.14)', padding: '8px 18px', borderRadius: 8 },
               t,
             ),
           ),
         ),
-        h({ fontFamily: 'Plex', fontSize: 22, color: C.muted }, `Didier Parody · ${post.reading_minutes} min de lectura`),
+        h(
+          { alignItems: 'center', gap: 14 },
+          avatar(44),
+          h({ fontFamily: 'Plex', fontSize: 22, color: C.muted }, `Didier Parody · ${post.reading_minutes} min de lectura`),
+        ),
       )
     : h({ fontFamily: 'Plex', fontSize: 24, color: C.muted }, DEFAULT_DESCRIPTION);
 
@@ -99,12 +118,24 @@ function card(post: PostMeta | null): Node {
     },
     logo,
     h(
-      { flexDirection: 'column', gap: 20, borderLeft: `6px solid ${C.orange}`, paddingLeft: 32 },
-      h({ fontFamily: 'Plex', fontSize: 24, letterSpacing: 2, color: C.orange }, kicker),
+      { alignItems: 'center', justifyContent: 'space-between', width: '100%' },
       h(
-        { fontFamily: 'Grotesk', fontWeight: 700, fontSize: titleSize(title), lineHeight: 1.1, color: C.text, maxWidth: 1000 },
-        title,
+        { flexDirection: 'column', gap: 20, borderLeft: `6px solid ${C.orange}`, paddingLeft: 32 },
+        h({ fontFamily: 'Plex', fontSize: 24, letterSpacing: 2, color: C.orange }, kicker),
+        h(
+          {
+            fontFamily: 'Grotesk',
+            fontWeight: 700,
+            fontSize: titleSize(title),
+            lineHeight: 1.1,
+            color: C.text,
+            maxWidth: post ? 1000 : 700,
+          },
+          title,
+        ),
       ),
+      // En la tarjeta del sitio el avatar es la identidad de marca.
+      !post && avatar(260),
     ),
     footer,
   );
@@ -116,7 +147,7 @@ export async function GET(request: Request): Promise<Response> {
   const tree = card(post);
 
   // Subconjunto de glifos: solo los caracteres que aparecen en la tarjeta.
-  const text = JSON.stringify(tree) + 'didier.log0123456789';
+  const text = collectText(tree) + 'didier.log0123456789';
   const [grotesk, plex, plexBold] = await Promise.all([
     googleFont('Space Grotesk', 700, text),
     googleFont('IBM Plex Mono', 400, text),

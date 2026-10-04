@@ -6,6 +6,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Post from './pages/Post';
 import Series from './pages/Series';
+import SeriesIndex from './pages/SeriesIndex';
 import Admin from './pages/Admin';
 import Unsubscribe from './pages/Unsubscribe';
 import Profile from './pages/Profile';
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/" element={<Home search={search} />} />
           <Route path="/tag/:tag" element={<Home search={search} />} />
           <Route path="/post/:slug" element={<Post />} />
+          <Route path="/series" element={<SeriesIndex />} />
           <Route path="/series/:slug" element={<Series />} />
           <Route path="/login" element={<Login />} />
           <Route path="/sso-callback" element={<AuthenticateWithRedirectCallback />} />

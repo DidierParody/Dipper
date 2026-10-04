@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, useClerk, useUser } from '@clerk/clerk-react';
 
@@ -18,6 +19,33 @@ export default function Header({ search, onSearch }: HeaderProps) {
 
   const isHome = location.pathname === '/' || location.pathname.startsWith('/tag/');
   const isCreator = location.pathname === '/creador';
+  const isSeries = location.pathname.startsWith('/series');
+
+  // Se oculta al bajar y reaparece al subir, para no tapar contenido al leer.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const height = headerRef.current?.offsetHeight ?? 72;
+      if (y <= height) {
+        setHidden(false);
+        lastY = y;
+      } else if (Math.abs(y - lastY) > 6) {
+        // Mientras se escribe en el buscador no se oculta.
+        setHidden(y > lastY && document.activeElement !== searchRef.current);
+        lastY = y;
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Al cambiar de página el encabezado vuelve a verse.
+  useEffect(() => setHidden(false), [location.pathname]);
 
   function handleSearchChange(value: string) {
     onSearch(value);
@@ -26,10 +54,14 @@ export default function Header({ search, onSearch }: HeaderProps) {
 
   return (
     <div
+      ref={headerRef}
       className="site-header"
       style={{
         position: 'sticky',
         top: 0,
+        transform: hidden ? 'translateY(-100%)' : 'none',
+        transition: 'transform .25s ease',
+        willChange: 'transform',
         zIndex: 50,
         display: 'flex',
         alignItems: 'center',
@@ -48,7 +80,7 @@ export default function Header({ search, onSearch }: HeaderProps) {
           <div style={{ position: 'absolute', inset: 5, background: '#0a0e18' }} />
           <div style={{ position: 'absolute', right: 4, bottom: 4, width: 6, height: 6, background: '#f0954c' }} />
         </div>
-        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px' }}>
+        <span className="nav-brand-text" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px' }}>
           didier<span style={{ color: '#3b82f6' }}>.log</span>
         </span>
       </div>
@@ -68,6 +100,7 @@ export default function Header({ search, onSearch }: HeaderProps) {
       >
         <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: '#5b6a8f', fontSize: 13 }}>/</span>
         <input
+          ref={searchRef}
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Buscar posts, tags, tecnologías..."
@@ -92,6 +125,13 @@ export default function Header({ search, onSearch }: HeaderProps) {
           style={{ color: isHome ? '#e9ecf4' : '#8b96b2' }}
         >
           Posts
+        </span>
+        <span
+          className="nav-link"
+          onClick={() => navigate('/series')}
+          style={{ color: isSeries ? '#e9ecf4' : '#8b96b2' }}
+        >
+          Series
         </span>
         <span
           className="nav-link"

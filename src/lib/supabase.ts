@@ -166,3 +166,56 @@ export async function fetchSeriesPosts(
     posts,
   };
 }
+
+export interface SeriesSummary extends SeriesInfo {
+  posts: Pick<Post, 'slug' | 'title' | 'series_order' | 'reading_minutes' | 'published_at'>[];
+  total_minutes: number;
+  last_published_at: string | null;
+}
+
+interface RawSeriesPost {
+  slug: string;
+  title: string;
+  series_order: number | null;
+  reading_minutes: number;
+  published_at: string | null;
+  series: RawSeries | RawSeries[] | null;
+}
+
+// Agrupa los posts publicados por serie: partes en orden, minutos totales y fecha más reciente.
+// Las series sin posts publicados no aparecen. Orden: la serie actualizada más recientemente primero.
+export function groupSeries(rows: RawSeriesPost[]): SeriesSummary[] {
+  const bySlug = new Map<string, SeriesSummary>();
+  for (const row of rows) {
+    const s = one(row.series);
+    if (!s) continue;
+    let entry = bySlug.get(s.slug);
+    if (!entry) {
+      entry = { slug: s.slug, title: s.title, description: s.description ?? null, posts: [], total_minutes: 0, last_published_at: null };
+      bySlug.set(s.slug, entry);
+    }
+    entry.posts.push({
+      slug: row.slug,
+      title: row.title,
+      series_order: row.series_order,
+      reading_minutes: row.reading_minutes,
+      published_at: row.published_at,
+    });
+    entry.total_minutes += row.reading_minutes;
+    if (row.published_at && (!entry.last_published_at || row.published_at > entry.last_published_at)) {
+      entry.last_published_at = row.published_at;
+    }
+  }
+  const list = [...bySlug.values()];
+  for (const s of list) s.posts.sort((a, b) => (a.series_order ?? 0) - (b.series_order ?? 0));
+  return list.sort((a, b) => (b.last_published_at ?? '').localeCompare(a.last_published_at ?? ''));
+}
+
+export async function fetchSeriesList(): Promise<SeriesSummary[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('slug,title,series_order,reading_minutes,published_at,series!inner(slug,title,description)')
+    .eq('status', 'published');
+  if (error) throw error;
+  return groupSeries((data ?? []) as unknown as RawSeriesPost[]);
+}

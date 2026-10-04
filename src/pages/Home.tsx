@@ -130,7 +130,7 @@ export default function Home({ search }: HomeProps) {
                   style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
                 />
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: '#5b6a8f' }}>
-                  Didier Parody · {minutes} min
+                  Didier Parody · {minutes} min de lectura
                 </span>
               </div>
             </div>
