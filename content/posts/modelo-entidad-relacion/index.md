@@ -36,13 +36,13 @@ Las entidades encontradas en el caso de  estudio son:
 - `posts` .
 - `series` .
 - `tags` .
-- `post_resources` .
-- `newletter_sends` .
+- `post_sources` .
+- `newsletter_sends` .
 - `subscribers` .
 
 > Aclaro que esto queda fuera del alcance del objetivo de este post, sin embargo quisiera contextualizar a la audiencia.
 
-Nótese algo interesante, en mi caso, necesito una tabla `post_resources`  debido a que mi intención es mostrar contenido (los famosos datos no estructurados), por buenas prácticas *¡nunca se debe almacenar en una base de datos estos tipos de datos!,* usualmente lo que hacemos es almacenarlos en algo llamado un [object storage](https://aws.amazon.com/what-is/object-storage/) y guardamos las referencias a los objetos almacenados en él en nuestra base de datos
+Nótese algo interesante, en mi caso, necesito una tabla `post_sources`  debido a que mi intención es mostrar contenido (los famosos datos no estructurados), por buenas prácticas *¡nunca se debe almacenar en una base de datos estos tipos de datos!,* usualmente lo que hacemos es almacenarlos en algo llamado un [object storage](https://aws.amazon.com/what-is/object-storage/) y guardamos las referencias a los objetos almacenados en él en nuestra base de datos
 > 
 
 ---
@@ -63,11 +63,11 @@ Los atributos asociados a cada identidad no resultan de alguna regla(excepto el 
 
 ![Figura 3](./images/image-02.png)
 
-- `post_resources` :
+- `post_sources` :
 
 ![Figura 4](./images/image-03.png)
 
-- `newletter_sends` :
+- `newsletter_sends` :
 
 ![Figura 5](./images/image-04.png)
 
@@ -306,7 +306,7 @@ La solución en este caso es una tabla, por eso la relación en el MER tiene atr
     
     ![Figura 15](./images/image-14.png)
     
-    Esta tabla es un caso especial, si nos fijamos tiene una relación 1:N, es algo normal, sin embargo estamos asignándole atributos como si fuera una tabla intermedia, y en realidad no lo es, este atributo es resultado del hecho de que un post no siempre pertenece a una serie, en otras palabras si el atributo no está en ninguna serie el atributo no tiene sentido, por eso conceptualmente le pertenece a la relación aunque la decisión más sensata sería incluirlo en la entidad de post y hago énfasis en ello porque se ve así en el MER pero en el MR es distinto, en realidad `series_oder`  pertenece a la tabla de posts.
+    Esta tabla es un caso especial, si nos fijamos tiene una relación 1:N, es algo normal, sin embargo estamos asignándole atributos como si fuera una tabla intermedia, y en realidad no lo es, este atributo es resultado del hecho de que un post no siempre pertenece a una serie, en otras palabras si el atributo no está en ninguna serie el atributo no tiene sentido, por eso conceptualmente le pertenece a la relación aunque la decisión más sensata sería incluirlo en la entidad de post y hago énfasis en ello porque se ve así en el MER pero en el MR es distinto, en realidad `series_order`  pertenece a la tabla de posts.
     
     A final de cuentas, aunque existen reglas la realidad es que todo se vuelve análisis y parte de ese análisis es jugar con las existentes en base a tu contexto.
     
